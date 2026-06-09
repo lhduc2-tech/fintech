@@ -16,8 +16,6 @@ public class UserDTO {
 
     private UUID id;
 
-    private String username;
-
     private String email;
 
     private String passwordHash;
@@ -27,6 +25,10 @@ public class UserDTO {
     private OffsetDateTime lastLoginAt;
 
     private String fullName;
+
+    private String phoneNumber;
+
+    private Integer failedLoginAttempts;
 
     @Builder.Default
     private Set<String> roleCodes = new HashSet<>();

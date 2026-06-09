@@ -16,6 +16,8 @@ logging:
         fintech: DEBUG
 
 spring:
+  config:
+    import: optional:file:.env[.properties]
   main:
     allow-bean-definition-overriding: true
   application:
@@ -103,6 +105,9 @@ application:
   jwt:
     secret: ${JWT_SECRET:}
     expiration-ms: ${JWT_EXPIRATION_MS:}
+  auth:
+    email-verification-ttl-seconds: ${EMAIL_VERIFICATION_TTL_SECONDS:86400}
+    account-unlock-code-ttl-seconds: ${ACCOUNT_UNLOCK_CODE_TTL_SECONDS:600}
 
 server:
   port: 8082

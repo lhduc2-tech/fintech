@@ -21,7 +21,6 @@ public interface RoleMapper extends BaseMapper<RoleEntity, RoleDTO> {
     RoleDTO toDto(RoleEntity entity);
 
     @Override
-    @Mapping(target = "id", ignore = true)
     @Mapping(target = "permissions", ignore = true)
     RoleEntity toEntity(RoleDTO dto);
 

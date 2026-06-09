@@ -2,6 +2,7 @@ package com.university.fintech.domain.entity;
 
 import com.github.f4b6a3.uuid.UuidCreator;
 import com.university.fintech.domain.audit.BaseAuditing;
+import com.university.fintech.shared.constant.Constant;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -22,8 +23,6 @@ public class UserEntity extends BaseAuditing {
     @Id
     private UUID id;
 
-    private String username;
-
     private String email;
 
     @Column(name = "password_hash")
@@ -36,6 +35,13 @@ public class UserEntity extends BaseAuditing {
 
     @Column(name = "full_name")
     private String fullName;
+
+    @Column(name = "phone_number", nullable = false, unique = true)
+    private String phoneNumber;
+
+    @Builder.Default
+    @Column(name = "failed_login_attempts")
+    private Integer failedLoginAttempts = 0;
 
     @Builder.Default
     @ManyToMany(fetch = FetchType.LAZY)
@@ -52,6 +58,12 @@ public class UserEntity extends BaseAuditing {
     public void prePersist() {
         if (id == null) {
             id = UuidCreator.getTimeOrderedEpoch();
+        }
+        if (status == null) {
+            status = Constant.STATUS_ACTIVE;
+        }
+        if (failedLoginAttempts == null) {
+            failedLoginAttempts = 0;
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.university.fintech.wire.security;
 
+import com.university.fintech.domain.port.primary.TokenBlacklistService;
 import com.university.fintech.wire.security.impl.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
     protected void doFilterInternal(
@@ -36,7 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // Collect authentication header
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
-        final String username;
+        final String email;
 
         // If not having token skip filter
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -47,13 +49,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // Extract token from header
         jwt = authHeader.substring(7);
         // Check if token is valid
-        if (jwtUtil.isTokenValid(jwt)) {
-            // Extract information from token (username, claims)
-            username = jwtUtil.extractUsername(jwt);
+        if (jwtUtil.isTokenValid(jwt) && !tokenBlacklistService.isBlacklisted(jwt)) {
+            // Extract information from token (email, claims)
+            email = jwtUtil.extractEmail(jwt);
             var claims = jwtUtil.extractAllClaims(jwt);
 
             // If having auth skip set up again
-            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 // Collect data from claims
                 String userId = claims.get("userId", String.class);
                 String fullName = claims.get("fullName", String.class);
@@ -67,9 +69,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 List<String> permissions = extractClaimList(claims.get("permissions"));
 
-                // Create a principal object that contains both username and userId
+                // Create a principal object that contains both email and userId
                 Map<String, String> principal = new HashMap<>();
-                principal.put("username", username);
+                principal.put("email", email);
                 principal.put("userId", userId);
                 principal.put("fullName", fullName);
 

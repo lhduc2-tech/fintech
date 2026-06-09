@@ -57,8 +57,8 @@ public class JwtUtil implements JwtProvider {
         return Jwts.builder()
                 // payload
                 .setClaims(claims)
-                // subject = username
-                .setSubject(userDTO.getUsername())
+                // subject = email
+                .setSubject(userDTO.getEmail())
                 // created at
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 // expiration time
@@ -68,8 +68,8 @@ public class JwtUtil implements JwtProvider {
                 .compact();
     }
 
-    // Collect username from token
-    public String extractUsername(String token) {
+    // Collect email from token
+    public String extractEmail(String token) {
         return extractAllClaims(token).getSubject();
     }
 
@@ -89,5 +89,10 @@ public class JwtUtil implements JwtProvider {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    public long getRemainingValidityMillis(String token) {
+        Date expiration = extractAllClaims(token).getExpiration();
+        return Math.max(0, expiration.getTime() - System.currentTimeMillis());
     }
 }

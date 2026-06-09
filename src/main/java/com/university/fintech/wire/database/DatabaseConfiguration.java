@@ -61,8 +61,8 @@ public class DatabaseConfiguration {
 
     private String resolveAuditor(Object principal) {
         if (principal instanceof Map<?, ?> map) {
-            Object username = map.get("username");
-            return username == null ? "" : username.toString();
+            Object email = map.get("email");
+            return email == null ? "" : email.toString();
         }
 
         return principal == null ? "" : principal.toString();

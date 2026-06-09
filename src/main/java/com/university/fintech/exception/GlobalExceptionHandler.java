@@ -31,7 +31,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AuthException.class)
     public ResponseEntity<Map<String, Object>> handleAuthException(AuthException ex) {
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getErrorCode(), ex.getMessage(), Collections.emptyMap());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getErrorCode(), ex.getMessage(), ex.getDetails());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -135,11 +135,11 @@ public class GlobalExceptionHandler {
     private String resolveDataIntegrityMessage(DataIntegrityViolationException ex) {
         String message = safeMessage(ex.getMostSpecificCause()).toLowerCase();
 
-        if ((message.contains("username") && message.contains("unique")) || message.contains("users_username_key")) {
-            return "Username already exists.";
-        }
         if ((message.contains("email") && message.contains("unique")) || message.contains("users_email_key")) {
             return "Email already exists.";
+        }
+        if ((message.contains("phone_number") && message.contains("unique")) || message.contains("users_phone_number_key")) {
+            return "Phone number already exists.";
         }
         if (message.contains("status") && message.contains("null")) {
             return "User status is required.";
