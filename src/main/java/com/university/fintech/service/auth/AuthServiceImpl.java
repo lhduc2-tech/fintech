@@ -9,8 +9,10 @@ import com.university.fintech.domain.mapper.UserMapper;
 import com.university.fintech.domain.mapper.RoleMapper;
 import com.university.fintech.domain.mapper.WalletMapper;
 import com.university.fintech.exception.domain.AuthException;
+import com.university.fintech.infrastructure.primary.restful.request.auth.ForgotPasswordRequest;
 import com.university.fintech.infrastructure.primary.restful.request.auth.LoginRequest;
 import com.university.fintech.infrastructure.primary.restful.request.auth.RegisterRequest;
+import com.university.fintech.infrastructure.primary.restful.request.auth.ResetPasswordRequest;
 import com.university.fintech.infrastructure.primary.restful.request.auth.VerifyOtpCodeRequest;
 import com.university.fintech.infrastructure.primary.restful.response.auth.AuthResponse;
 import com.university.fintech.infrastructure.secondary.jpa.repository.RoleRepository;
@@ -21,6 +23,7 @@ import com.university.fintech.domain.port.primary.AuthService;
 import com.university.fintech.domain.port.primary.AccountUnlockCodeService;
 import com.university.fintech.domain.port.primary.EmailVerificationRateLimitService;
 import com.university.fintech.domain.port.primary.EmailVerificationTokenService;
+import com.university.fintech.domain.port.primary.PasswordResetCodeService;
 import com.university.fintech.domain.port.primary.TokenBlacklistService;
 import com.university.fintech.shared.constant.Constant;
 import com.university.fintech.wire.security.Password;
@@ -51,6 +54,7 @@ public class AuthServiceImpl implements AuthService {
     private final EmailVerificationRateLimitService emailVerificationRateLimitService;
     private final EmailVerificationTokenService emailVerificationTokenService;
     private final AccountUnlockCodeService accountUnlockCodeService;
+    private final PasswordResetCodeService passwordResetCodeService;
     private final AuthMailService authMailService;
     private final TokenBlacklistService tokenBlacklistService;
 
@@ -137,6 +141,43 @@ public class AuthServiceImpl implements AuthService {
         String verificationCode = emailVerificationTokenService.createCode(email);
         authMailService.sendVerificationCode(email, request.getFullName(), verificationCode);
         emailVerificationRateLimitService.recordSent(email);
+    }
+
+    @Override
+    @Transactional
+    public void forgotPassword(ForgotPasswordRequest request) {
+        String email = request.getEmail().trim().toLowerCase();
+        emailVerificationRateLimitService.assertCanSend(email);
+
+        userRepository.findByEmail(email).ifPresent(user -> {
+            String resetCode = passwordResetCodeService.createCode(email);
+            authMailService.sendPasswordResetCode(email, user.getFullName(), resetCode);
+        });
+        emailVerificationRateLimitService.recordSent(email);
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        String email = request.getEmail().trim().toLowerCase();
+        String verificationCode = request.getVerificationCode().trim();
+        UserEntity userEntity = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AuthException(
+                        Constant.MESSAGE_INVALID_PASSWORD_RESET_CODE,
+                        Constant.ERROR_INVALID_PASSWORD_RESET_CODE
+                ));
+
+        if (!passwordResetCodeService.isCodeValid(email, verificationCode)) {
+            throw new AuthException(
+                    Constant.MESSAGE_INVALID_PASSWORD_RESET_CODE,
+                    Constant.ERROR_INVALID_PASSWORD_RESET_CODE
+            );
+        }
+
+        userEntity.setPasswordHash(password.encode(request.getNewPassword()));
+        userEntity.setFailedLoginAttempts(0);
+        userEntity.setStatus(Constant.STATUS_ACTIVE);
+        passwordResetCodeService.consumeCode(email);
     }
 
     @Override

@@ -111,6 +111,7 @@ application:
     email-verification-send-window-seconds: ${EMAIL_VERIFICATION_SEND_WINDOW_SECONDS:600}
     email-verification-send-cooldown-seconds: ${EMAIL_VERIFICATION_SEND_COOLDOWN_SECONDS:60}
     account-unlock-code-ttl-seconds: ${ACCOUNT_UNLOCK_CODE_TTL_SECONDS:600}
+    password-reset-code-ttl-seconds: ${PASSWORD_RESET_CODE_TTL_SECONDS:600}
 
 server:
   port: 8082

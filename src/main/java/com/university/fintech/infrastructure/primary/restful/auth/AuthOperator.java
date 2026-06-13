@@ -1,7 +1,9 @@
 package com.university.fintech.infrastructure.primary.restful.auth;
 
 import com.university.fintech.infrastructure.primary.restful.request.auth.LoginRequest;
+import com.university.fintech.infrastructure.primary.restful.request.auth.ForgotPasswordRequest;
 import com.university.fintech.infrastructure.primary.restful.request.auth.RegisterRequest;
+import com.university.fintech.infrastructure.primary.restful.request.auth.ResetPasswordRequest;
 import com.university.fintech.infrastructure.primary.restful.request.auth.VerifyOtpCodeRequest;
 import com.university.fintech.infrastructure.primary.restful.response.auth.AuthResponse;
 import com.university.fintech.infrastructure.primary.restful.response.auth.MessageResponse;
@@ -38,6 +40,18 @@ public class AuthOperator {
         public MessageResponse getVerificationOTPCode(@Valid @RequestBody VerifyOtpCodeRequest request) {
             authService.getVerificationOTPCode(request);
             return new MessageResponse(Constant.MESSAGE_VERIFICATION_CODE_SENT_SUCCESSFULLY);
+        }
+
+        @PostMapping("/forgot-password")
+        public MessageResponse forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+            authService.forgotPassword(request);
+            return new MessageResponse(Constant.MESSAGE_PASSWORD_RESET_CODE_SENT_SUCCESSFULLY);
+        }
+
+        @PostMapping("/reset-password")
+        public MessageResponse resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+            authService.resetPassword(request);
+            return new MessageResponse(Constant.MESSAGE_PASSWORD_RESET_SUCCESSFULLY);
         }
     }
 

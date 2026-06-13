@@ -59,6 +59,23 @@ public class AuthMailServiceImpl implements AuthMailService {
         mailSender.send(message);
     }
 
+    @Override
+    public void sendPasswordResetCode(String to, String fullName, String resetCode) {
+        MimeMessage message = mailSender.createMimeMessage();
+        try {
+            MimeMessageHelper helper = new MimeMessageHelper(message, Constant.CHARSET_UTF_8);
+            helper.setTo(to);
+            if (from != null && !from.isBlank()) {
+                helper.setFrom(from);
+            }
+            helper.setSubject(Constant.PASSWORD_RESET_SUBJECT);
+            helper.setText(buildPasswordResetTemplate(fullName, resetCode), true);
+        } catch (MessagingException e) {
+            throw new IllegalStateException(Constant.MESSAGE_BUILD_VERIFICATION_EMAIL_FAILED, e);
+        }
+        mailSender.send(message);
+    }
+
     private String buildVerificationTemplate(String fullName, String verificationCode) {
         String displayName = fullName == null || fullName.isBlank() ? Constant.EMAIL_FALLBACK_DISPLAY_NAME : escapeHtml(fullName);
         return loadTemplate()
@@ -75,6 +92,13 @@ public class AuthMailServiceImpl implements AuthMailService {
         return loadTemplate(Constant.ACCOUNT_UNLOCK_TEMPLATE)
                 .replace(Constant.EMAIL_TEMPLATE_FULL_NAME_PLACEHOLDER, displayName)
                 .replace(Constant.EMAIL_TEMPLATE_UNLOCK_CODE_PLACEHOLDER, escapeHtml(unlockCode));
+    }
+
+    private String buildPasswordResetTemplate(String fullName, String resetCode) {
+        String displayName = fullName == null || fullName.isBlank() ? Constant.EMAIL_FALLBACK_DISPLAY_NAME : escapeHtml(fullName);
+        return loadTemplate(Constant.PASSWORD_RESET_TEMPLATE)
+                .replace(Constant.EMAIL_TEMPLATE_FULL_NAME_PLACEHOLDER, displayName)
+                .replace(Constant.EMAIL_TEMPLATE_RESET_CODE_PLACEHOLDER, escapeHtml(resetCode));
     }
 
     private String loadTemplate(String template) {
