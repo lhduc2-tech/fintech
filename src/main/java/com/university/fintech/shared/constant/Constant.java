@@ -12,6 +12,8 @@ public class Constant {
     public static final String STATUS_ACTIVE = "ACTIVE";
     public static final String STATUS_PENDING_EMAIL_VERIFICATION = "PENDING_EMAIL_VERIFICATION";
     public static final String STATUS_LOCKED = "LOCKED";
+    public static final String STATUS_SUCCESS = "SUCCESS";
+    public static final String STATUS_FAILED = "FAILED";
 
     public static final String DEFAULT_ROLE_CODE = "USER";
 
@@ -79,6 +81,13 @@ public class Constant {
     public static final String ERROR_USER_NOT_FOUND = "USER_NOT_FOUND";
     public static final String ERROR_INVALID_TOKEN = "INVALID_TOKEN";
     public static final String ERROR_VERIFICATION_CODE_RATE_LIMITED = "VERIFICATION_CODE_RATE_LIMITED";
+    public static final String ERROR_WALLET_NOT_FOUND = "WALLET_NOT_FOUND";
+    public static final String ERROR_BANK_ACCOUNT_NOT_FOUND = "BANK_ACCOUNT_NOT_FOUND";
+    public static final String ERROR_INSUFFICIENT_BANK_BALANCE = "INSUFFICIENT_BANK_BALANCE";
+    public static final String ERROR_INSUFFICIENT_WALLET_BALANCE = "INSUFFICIENT_WALLET_BALANCE";
+    public static final String ERROR_DUPLICATED_TRANSACTION = "DUPLICATED_TRANSACTION";
+    public static final String ERROR_RECIPIENT_NOT_FOUND = "RECIPIENT_NOT_FOUND";
+    public static final String ERROR_SELF_WALLET_TRANSFER = "SELF_WALLET_TRANSFER";
 
     public static final String MESSAGE_EMAIL_ALREADY_EXISTS = "Email already exists.";
     public static final String MESSAGE_PHONE_NUMBER_ALREADY_EXISTS = "Phone number already exists.";
@@ -94,6 +103,13 @@ public class Constant {
     public static final String MESSAGE_INVALID_TOKEN = "Token is invalid.";
     public static final String MESSAGE_VERIFICATION_CODE_SEND_COOLDOWN = "Please wait before requesting another verification code.";
     public static final String MESSAGE_VERIFICATION_CODE_SEND_LIMIT_EXCEEDED = "Verification code request limit exceeded. Please try again later.";
+    public static final String MESSAGE_WALLET_NOT_FOUND = "Wallet was not found.";
+    public static final String MESSAGE_BANK_ACCOUNT_NOT_FOUND = "Linked bank account was not found.";
+    public static final String MESSAGE_INSUFFICIENT_BANK_BALANCE = "Bank balance is insufficient.";
+    public static final String MESSAGE_INSUFFICIENT_WALLET_BALANCE = "Wallet balance is insufficient.";
+    public static final String MESSAGE_DUPLICATED_TRANSACTION = "Transaction idempotency key already exists.";
+    public static final String MESSAGE_RECIPIENT_NOT_FOUND = "Recipient was not found.";
+    public static final String MESSAGE_SELF_WALLET_TRANSFER = "Cannot transfer money to your own wallet.";
     public static final String MESSAGE_BUILD_VERIFICATION_EMAIL_FAILED = "Could not build verification email.";
     public static final String MESSAGE_LOAD_VERIFICATION_EMAIL_TEMPLATE_FAILED = "Could not load verification email template.";
     public static final String PHONE_NUMBER_NUMERIC_PATTERN = "^\\d+$";
@@ -104,4 +120,9 @@ public class Constant {
     public static final String MESSAGE_VERIFICATION_CODE_SENT_SUCCESSFULLY = "Verification code sent successfully.";
     public static final String MESSAGE_PASSWORD_RESET_CODE_SENT_SUCCESSFULLY = "Password reset code sent successfully.";
     public static final String MESSAGE_PASSWORD_RESET_SUCCESSFULLY = "Password reset successfully.";
+    public static final String WALLET_TRANSACTION_TYPE_BANK_TO_WALLET = "BANK_TO_WALLET";
+    public static final String WALLET_TRANSACTION_TYPE_WALLET_TO_BANK = "WALLET_TO_BANK";
+    public static final String WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_OUT = "WALLET_TRANSFER_OUT";
+    public static final String WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_IN = "WALLET_TRANSFER_IN";
+    public static final String WALLET_TRANSFER_CREDIT_IDEMPOTENCY_SUFFIX = ":CREDIT";
 }
