@@ -49,6 +49,20 @@ public class RedisRestTokenStore {
         return response == null || response.getResult() == null ? null : response.getResult().toString();
     }
 
+    public long ttl(String key) {
+        if (!enabled) {
+            return -2;
+        }
+        RedisRestResponse response = restClient.post()
+                .body(List.of("TTL", key))
+                .retrieve()
+                .body(RedisRestResponse.class);
+        if (response == null || response.getResult() == null) {
+            return -2;
+        }
+        return Long.parseLong(response.getResult().toString());
+    }
+
     public void delete(String key) {
         requireEnabled();
         restClient.post()

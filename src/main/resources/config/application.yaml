@@ -107,6 +107,9 @@ application:
     expiration-ms: ${JWT_EXPIRATION_MS:}
   auth:
     email-verification-ttl-seconds: ${EMAIL_VERIFICATION_TTL_SECONDS:86400}
+    email-verification-send-max-attempts: ${EMAIL_VERIFICATION_SEND_MAX_ATTEMPTS:3}
+    email-verification-send-window-seconds: ${EMAIL_VERIFICATION_SEND_WINDOW_SECONDS:600}
+    email-verification-send-cooldown-seconds: ${EMAIL_VERIFICATION_SEND_COOLDOWN_SECONDS:60}
     account-unlock-code-ttl-seconds: ${ACCOUNT_UNLOCK_CODE_TTL_SECONDS:600}
 
 server:

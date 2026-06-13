@@ -19,6 +19,7 @@ import com.university.fintech.infrastructure.secondary.jpa.repository.WalletRepo
 import com.university.fintech.domain.port.primary.AuthMailService;
 import com.university.fintech.domain.port.primary.AuthService;
 import com.university.fintech.domain.port.primary.AccountUnlockCodeService;
+import com.university.fintech.domain.port.primary.EmailVerificationRateLimitService;
 import com.university.fintech.domain.port.primary.EmailVerificationTokenService;
 import com.university.fintech.domain.port.primary.TokenBlacklistService;
 import com.university.fintech.shared.constant.Constant;
@@ -47,6 +48,7 @@ public class AuthServiceImpl implements AuthService {
     private final RoleMapper roleMapper;
     private final WalletMapper walletMapper;
     private final JwtUtil jwtUtil;
+    private final EmailVerificationRateLimitService emailVerificationRateLimitService;
     private final EmailVerificationTokenService emailVerificationTokenService;
     private final AccountUnlockCodeService accountUnlockCodeService;
     private final AuthMailService authMailService;
@@ -131,8 +133,10 @@ public class AuthServiceImpl implements AuthService {
         if (userRepository.existsByEmail(email)) {
             throw new AuthException(Constant.MESSAGE_EMAIL_ALREADY_EXISTS, Constant.ERROR_EMAIL_ALREADY_EXISTS);
         }
+        emailVerificationRateLimitService.assertCanSend(email);
         String verificationCode = emailVerificationTokenService.createCode(email);
         authMailService.sendVerificationCode(email, request.getFullName(), verificationCode);
+        emailVerificationRateLimitService.recordSent(email);
     }
 
     @Override

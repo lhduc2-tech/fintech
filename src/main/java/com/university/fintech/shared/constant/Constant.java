@@ -19,6 +19,9 @@ public class Constant {
 
     public static final String SPRING_MAIL_USERNAME_PROPERTY = "${spring.mail.username:}";
     public static final String EMAIL_VERIFICATION_TTL_SECONDS_PROPERTY = "${application.auth.email-verification-ttl-seconds}";
+    public static final String EMAIL_VERIFICATION_SEND_MAX_ATTEMPTS_PROPERTY = "${application.auth.email-verification-send-max-attempts}";
+    public static final String EMAIL_VERIFICATION_SEND_WINDOW_SECONDS_PROPERTY = "${application.auth.email-verification-send-window-seconds}";
+    public static final String EMAIL_VERIFICATION_SEND_COOLDOWN_SECONDS_PROPERTY = "${application.auth.email-verification-send-cooldown-seconds}";
     public static final String ACCOUNT_UNLOCK_CODE_TTL_SECONDS_PROPERTY = "${application.auth.account-unlock-code-ttl-seconds}";
 
     public static final String CHARSET_UTF_8 = "UTF-8";
@@ -33,6 +36,8 @@ public class Constant {
     public static final String EMAIL_FALLBACK_DISPLAY_NAME = "ban";
 
     public static final String EMAIL_VERIFY_REDIS_PREFIX = "auth:email-verify:";
+    public static final String EMAIL_VERIFY_SEND_COUNT_REDIS_PREFIX = "auth:email-verify:send-count:";
+    public static final String EMAIL_VERIFY_SEND_COOLDOWN_REDIS_PREFIX = "auth:email-verify:send-cooldown:";
     public static final String ACCOUNT_UNLOCK_REDIS_PREFIX = "auth:account-unlock:";
     public static final String TOKEN_BLACKLIST_REDIS_PREFIX = "auth:blacklist:";
     public static final String TOKEN_BLACKLIST_VALUE = "1";
@@ -65,6 +70,7 @@ public class Constant {
     public static final String ERROR_INVALID_UNLOCK_CODE = "INVALID_UNLOCK_CODE";
     public static final String ERROR_USER_NOT_FOUND = "USER_NOT_FOUND";
     public static final String ERROR_INVALID_TOKEN = "INVALID_TOKEN";
+    public static final String ERROR_VERIFICATION_CODE_RATE_LIMITED = "VERIFICATION_CODE_RATE_LIMITED";
 
     public static final String MESSAGE_EMAIL_ALREADY_EXISTS = "Email already exists.";
     public static final String MESSAGE_PHONE_NUMBER_ALREADY_EXISTS = "Phone number already exists.";
@@ -77,6 +83,8 @@ public class Constant {
     public static final String MESSAGE_INVALID_UNLOCK_CODE = "Account unlock code is invalid or expired.";
     public static final String MESSAGE_USER_NOT_FOUND = "User was not found.";
     public static final String MESSAGE_INVALID_TOKEN = "Token is invalid.";
+    public static final String MESSAGE_VERIFICATION_CODE_SEND_COOLDOWN = "Please wait before requesting another verification code.";
+    public static final String MESSAGE_VERIFICATION_CODE_SEND_LIMIT_EXCEEDED = "Verification code request limit exceeded. Please try again later.";
     public static final String MESSAGE_BUILD_VERIFICATION_EMAIL_FAILED = "Could not build verification email.";
     public static final String MESSAGE_LOAD_VERIFICATION_EMAIL_TEMPLATE_FAILED = "Could not load verification email template.";
     public static final String PHONE_NUMBER_NUMERIC_PATTERN = "^\\d+$";
