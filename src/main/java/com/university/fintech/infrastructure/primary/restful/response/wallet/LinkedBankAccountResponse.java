@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 @Getter
@@ -18,6 +17,10 @@ public class LinkedBankAccountResponse {
 
     private UUID id;
 
+    private UUID walletId;
+
+    private UUID bankId;
+
     private String bankCode;
 
     private String bankName;
@@ -25,8 +28,6 @@ public class LinkedBankAccountResponse {
     private String accountNumber;
 
     private String accountHolderName;
-
-    private BigDecimal balance;
 
     private String status;
 }

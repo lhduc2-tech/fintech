@@ -14,11 +14,17 @@ import java.util.UUID;
 @Repository
 public interface LinkedBankAccountRepository extends BaseJPARepository<LinkedBankAccountEntity, UUID> {
 
-    List<LinkedBankAccountEntity> findAllByUserIdOrderByCreatedAtDesc(UUID userId);
+    @Query("select bankAccount from LinkedBankAccountEntity bankAccount where bankAccount.wallet.user.id = :userId order by bankAccount.createdAt desc")
+    List<LinkedBankAccountEntity> findAllByUserIdOrderByCreatedAtDesc(@Param("userId") UUID userId);
 
-    Optional<LinkedBankAccountEntity> findByIdAndUserId(UUID id, UUID userId);
+    @Query("select bankAccount from LinkedBankAccountEntity bankAccount where bankAccount.id = :id and bankAccount.wallet.user.id = :userId")
+    Optional<LinkedBankAccountEntity> findByIdAndUserId(@Param("id") UUID id, @Param("userId") UUID userId);
+
+    boolean existsByWalletIdAndBankId(UUID walletId, UUID bankId);
+
+    boolean existsByBankId(UUID bankId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select bankAccount from LinkedBankAccountEntity bankAccount where bankAccount.id = :id and bankAccount.user.id = :userId")
+    @Query("select bankAccount from LinkedBankAccountEntity bankAccount where bankAccount.id = :id and bankAccount.wallet.user.id = :userId")
     Optional<LinkedBankAccountEntity> findByIdAndUserIdForUpdate(@Param("id") UUID id, @Param("userId") UUID userId);
 }

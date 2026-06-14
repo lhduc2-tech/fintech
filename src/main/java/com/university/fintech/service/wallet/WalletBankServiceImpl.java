@@ -2,6 +2,7 @@ package com.university.fintech.service.wallet;
 
 import com.university.fintech.domain.dto.LinkedBankAccountDTO;
 import com.university.fintech.domain.dto.WalletTransactionDTO;
+import com.university.fintech.domain.entity.BankEntity;
 import com.university.fintech.domain.entity.LinkedBankAccountEntity;
 import com.university.fintech.domain.entity.UserEntity;
 import com.university.fintech.domain.entity.WalletEntity;
@@ -18,6 +19,7 @@ import com.university.fintech.infrastructure.primary.restful.response.PageRespon
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionResponse;
+import com.university.fintech.infrastructure.secondary.jpa.repository.BankRepository;
 import com.university.fintech.infrastructure.secondary.jpa.repository.LinkedBankAccountRepository;
 import com.university.fintech.infrastructure.secondary.jpa.repository.UserRepository;
 import com.university.fintech.infrastructure.secondary.jpa.repository.WalletRepository;
@@ -38,6 +40,7 @@ import java.util.UUID;
 public class WalletBankServiceImpl implements WalletBankService {
 
     private final UserRepository userRepository;
+    private final BankRepository bankRepository;
     private final WalletRepository walletRepository;
     private final LinkedBankAccountRepository linkedBankAccountRepository;
     private final WalletTransactionRepository walletTransactionRepository;
@@ -54,17 +57,27 @@ public class WalletBankServiceImpl implements WalletBankService {
     @Override
     @Transactional
     public LinkedBankAccountResponse linkBankAccount(UUID userId, LinkBankAccountRequest request) {
+        WalletEntity wallet = findWallet(userId);
+        String bankCode = request.getBankCode().trim().toUpperCase();
+        String accountNumber = request.getAccountNumber().trim();
+        BankEntity bank = bankRepository.findByBankCodeAndAccountNumber(bankCode, accountNumber)
+                .orElseThrow(() -> new AuthException(Constant.MESSAGE_BANK_NOT_FOUND, Constant.ERROR_BANK_NOT_FOUND));
+
+        if (linkedBankAccountRepository.existsByBankId(bank.getId())) {
+            throw new AuthException(
+                    Constant.MESSAGE_BANK_ACCOUNT_ALREADY_LINKED,
+                    Constant.ERROR_BANK_ACCOUNT_ALREADY_LINKED
+            );
+        }
+
         LinkedBankAccountDTO bankAccountDto = LinkedBankAccountDTO.builder()
-                .userId(userId)
-                .bankCode(request.getBankCode().trim().toUpperCase())
-                .bankName(trimToNull(request.getBankName()))
-                .accountNumber(request.getAccountNumber().trim())
-                .accountHolderName(request.getAccountHolderName().trim().toUpperCase())
-                .balance(request.getBalance())
+                .walletId(wallet.getId())
+                .bankId(bank.getId())
                 .status(Constant.STATUS_ACTIVE)
                 .build();
         LinkedBankAccountEntity bankAccount = linkedBankAccountMapper.toEntity(bankAccountDto);
-        bankAccount.setUser(userRepository.getReferenceById(userId));
+        bankAccount.setWallet(wallet);
+        bankAccount.setBank(bank);
         return toLinkedBankAccountResponse(linkedBankAccountMapper.toDto(linkedBankAccountRepository.save(bankAccount)));
     }
 
@@ -83,9 +96,7 @@ public class WalletBankServiceImpl implements WalletBankService {
         return executeTransfer(
                 userId,
                 request,
-                Constant.WALLET_TRANSACTION_TYPE_BANK_TO_WALLET,
-                Constant.MESSAGE_INSUFFICIENT_BANK_BALANCE,
-                Constant.ERROR_INSUFFICIENT_BANK_BALANCE
+                Constant.WALLET_TRANSACTION_TYPE_BANK_TO_WALLET
         );
     }
 
@@ -95,9 +106,7 @@ public class WalletBankServiceImpl implements WalletBankService {
         return executeTransfer(
                 userId,
                 request,
-                Constant.WALLET_TRANSACTION_TYPE_WALLET_TO_BANK,
-                Constant.MESSAGE_INSUFFICIENT_WALLET_BALANCE,
-                Constant.ERROR_INSUFFICIENT_WALLET_BALANCE
+                Constant.WALLET_TRANSACTION_TYPE_WALLET_TO_BANK
         );
     }
 
@@ -179,9 +188,7 @@ public class WalletBankServiceImpl implements WalletBankService {
     private WalletTransactionResponse executeTransfer(
             UUID userId,
             WalletBankTransferRequest request,
-            String transactionType,
-            String insufficientBalanceMessage,
-            String insufficientBalanceError
+            String transactionType
     ) {
         String idempotencyKey = request.getIdempotencyKey().trim();
         var existingTransaction = walletTransactionRepository.findByIdempotencyKey(idempotencyKey);
@@ -200,13 +207,15 @@ public class WalletBankServiceImpl implements WalletBankService {
 
         BigDecimal amount = request.getAmount();
         if (Constant.WALLET_TRANSACTION_TYPE_BANK_TO_WALLET.equals(transactionType)) {
-            ensureEnoughBalance(bankAccount.getBalance(), amount, insufficientBalanceMessage, insufficientBalanceError);
-            bankAccount.setBalance(bankAccount.getBalance().subtract(amount));
             wallet.setAvailableBalance(wallet.getAvailableBalance().add(amount));
         } else {
-            ensureEnoughBalance(wallet.getAvailableBalance(), amount, insufficientBalanceMessage, insufficientBalanceError);
+            ensureEnoughBalance(
+                    wallet.getAvailableBalance(),
+                    amount,
+                    Constant.MESSAGE_INSUFFICIENT_WALLET_BALANCE,
+                    Constant.ERROR_INSUFFICIENT_WALLET_BALANCE
+            );
             wallet.setAvailableBalance(wallet.getAvailableBalance().subtract(amount));
-            bankAccount.setBalance(bankAccount.getBalance().add(amount));
         }
 
         WalletTransactionDTO transactionDto = WalletTransactionDTO.builder()
@@ -278,11 +287,12 @@ public class WalletBankServiceImpl implements WalletBankService {
     private LinkedBankAccountResponse toLinkedBankAccountResponse(LinkedBankAccountDTO bankAccount) {
         return LinkedBankAccountResponse.builder()
                 .id(bankAccount.getId())
+                .walletId(bankAccount.getWalletId())
+                .bankId(bankAccount.getBankId())
                 .bankCode(bankAccount.getBankCode())
                 .bankName(bankAccount.getBankName())
                 .accountNumber(bankAccount.getAccountNumber())
                 .accountHolderName(bankAccount.getAccountHolderName())
-                .balance(bankAccount.getBalance())
                 .status(bankAccount.getStatus())
                 .build();
     }
@@ -303,10 +313,4 @@ public class WalletBankServiceImpl implements WalletBankService {
                 .build();
     }
 
-    private String trimToNull(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        return value.trim();
-    }
 }

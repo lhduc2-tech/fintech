@@ -82,8 +82,9 @@ public class Constant {
     public static final String ERROR_INVALID_TOKEN = "INVALID_TOKEN";
     public static final String ERROR_VERIFICATION_CODE_RATE_LIMITED = "VERIFICATION_CODE_RATE_LIMITED";
     public static final String ERROR_WALLET_NOT_FOUND = "WALLET_NOT_FOUND";
+    public static final String ERROR_BANK_NOT_FOUND = "BANK_NOT_FOUND";
     public static final String ERROR_BANK_ACCOUNT_NOT_FOUND = "BANK_ACCOUNT_NOT_FOUND";
-    public static final String ERROR_INSUFFICIENT_BANK_BALANCE = "INSUFFICIENT_BANK_BALANCE";
+    public static final String ERROR_BANK_ACCOUNT_ALREADY_LINKED = "BANK_ACCOUNT_ALREADY_LINKED";
     public static final String ERROR_INSUFFICIENT_WALLET_BALANCE = "INSUFFICIENT_WALLET_BALANCE";
     public static final String ERROR_DUPLICATED_TRANSACTION = "DUPLICATED_TRANSACTION";
     public static final String ERROR_RECIPIENT_NOT_FOUND = "RECIPIENT_NOT_FOUND";
@@ -104,8 +105,9 @@ public class Constant {
     public static final String MESSAGE_VERIFICATION_CODE_SEND_COOLDOWN = "Please wait before requesting another verification code.";
     public static final String MESSAGE_VERIFICATION_CODE_SEND_LIMIT_EXCEEDED = "Verification code request limit exceeded. Please try again later.";
     public static final String MESSAGE_WALLET_NOT_FOUND = "Wallet was not found.";
+    public static final String MESSAGE_BANK_NOT_FOUND = "Bank was not found.";
     public static final String MESSAGE_BANK_ACCOUNT_NOT_FOUND = "Linked bank account was not found.";
-    public static final String MESSAGE_INSUFFICIENT_BANK_BALANCE = "Bank balance is insufficient.";
+    public static final String MESSAGE_BANK_ACCOUNT_ALREADY_LINKED = "Bank is already linked to this wallet.";
     public static final String MESSAGE_INSUFFICIENT_WALLET_BALANCE = "Wallet balance is insufficient.";
     public static final String MESSAGE_DUPLICATED_TRANSACTION = "Transaction idempotency key already exists.";
     public static final String MESSAGE_RECIPIENT_NOT_FOUND = "Recipient was not found.";

@@ -17,7 +17,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
@@ -33,24 +32,12 @@ public class LinkedBankAccountEntity extends BaseAuditing {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
-    private UserEntity user;
+    @JoinColumn(name = "wallet_id", nullable = false)
+    private WalletEntity wallet;
 
-    @Column(name = "bank_code", nullable = false)
-    private String bankCode;
-
-    @Column(name = "bank_name")
-    private String bankName;
-
-    @Column(name = "account_number", nullable = false)
-    private String accountNumber;
-
-    @Column(name = "account_holder_name", nullable = false)
-    private String accountHolderName;
-
-    @Builder.Default
-    @Column(name = "balance", nullable = false)
-    private BigDecimal balance = BigDecimal.ZERO;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "bank_id", nullable = false)
+    private BankEntity bank;
 
     @Builder.Default
     @Column(name = "status", nullable = false)
@@ -60,9 +47,6 @@ public class LinkedBankAccountEntity extends BaseAuditing {
     public void prePersist() {
         if (id == null) {
             id = UuidCreator.getTimeOrderedEpoch();
-        }
-        if (balance == null) {
-            balance = BigDecimal.ZERO;
         }
         if (status == null) {
             status = Constant.STATUS_ACTIVE;

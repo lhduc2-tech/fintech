@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -19,7 +18,9 @@ public class LinkedBankAccountDTO {
 
     private UUID id;
 
-    private UUID userId;
+    private UUID walletId;
+
+    private UUID bankId;
 
     private String bankCode;
 
@@ -28,9 +29,6 @@ public class LinkedBankAccountDTO {
     private String accountNumber;
 
     private String accountHolderName;
-
-    @Builder.Default
-    private BigDecimal balance = BigDecimal.ZERO;
 
     private String status;
 
