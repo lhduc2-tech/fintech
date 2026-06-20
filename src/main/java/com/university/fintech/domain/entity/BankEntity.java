@@ -14,6 +14,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
@@ -44,6 +45,10 @@ public class BankEntity extends BaseAuditing {
     @Column(name = "status", nullable = false)
     private String status = Constant.STATUS_ACTIVE;
 
+    @Builder.Default
+    @Column(name = "balance")
+    private BigDecimal balance = BigDecimal.ZERO;
+
     @PrePersist
     public void prePersist() {
         if (id == null) {
@@ -51,6 +56,9 @@ public class BankEntity extends BaseAuditing {
         }
         if (status == null) {
             status = Constant.STATUS_ACTIVE;
+        }
+        if (balance == null) {
+            balance = BigDecimal.ZERO;
         }
     }
 }

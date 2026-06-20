@@ -4,6 +4,7 @@ import com.university.fintech.infrastructure.primary.restful.request.wallet.Link
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletBankTransferRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletRecipientLookupRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransferRequest;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.BankResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRecipientLookupResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
@@ -19,6 +20,8 @@ import java.util.UUID;
 public interface WalletBankService {
 
     WalletResponse getWallet(UUID userId);
+
+    List<BankResponse> getBanks();
 
     LinkedBankAccountResponse linkBankAccount(UUID userId, LinkBankAccountRequest request);
 

@@ -16,6 +16,7 @@ import com.university.fintech.infrastructure.primary.restful.request.wallet.Link
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletBankTransferRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletRecipientLookupRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransferRequest;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.BankResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRecipientLookupResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
@@ -63,6 +64,14 @@ public class WalletBankServiceImpl implements WalletBankService {
     @Transactional(readOnly = true)
     public WalletResponse getWallet(UUID userId) {
         return toWalletResponse(walletMapper.toDto(findWallet(userId)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BankResponse> getBanks() {
+        return bankRepository.findAll(Sort.by(Sort.Direction.ASC, "bankName", "bankCode", "accountNumber")).stream()
+                .map(this::toBankResponse)
+                .toList();
     }
 
     @Override
@@ -272,6 +281,7 @@ public class WalletBankServiceImpl implements WalletBankService {
             if (!transaction.getUser().getId().equals(userId)) {
                 throw new AuthException(Constant.MESSAGE_DUPLICATED_TRANSACTION, Constant.ERROR_DUPLICATED_TRANSACTION);
             }
+            ensureSameBankTransferPayload(transaction, request, transactionType);
             return toWalletTransactionResponse(walletTransactionMapper.toDto(transaction));
         }
 
@@ -279,9 +289,23 @@ public class WalletBankServiceImpl implements WalletBankService {
                 .orElseThrow(() -> new AuthException(Constant.MESSAGE_WALLET_NOT_FOUND, Constant.ERROR_WALLET_NOT_FOUND));
         LinkedBankAccountEntity bankAccount = linkedBankAccountRepository.findByIdAndUserIdForUpdate(request.getLinkedBankAccountId(), userId)
                 .orElseThrow(() -> new AuthException(Constant.MESSAGE_BANK_ACCOUNT_NOT_FOUND, Constant.ERROR_BANK_ACCOUNT_NOT_FOUND));
+        BankEntity bank = bankRepository.findByIdForUpdate(bankAccount.getBank().getId())
+                .orElseThrow(() -> new AuthException(Constant.MESSAGE_BANK_NOT_FOUND, Constant.ERROR_BANK_NOT_FOUND));
+
+        ensureActiveUser(wallet.getUser());
+        ensureActiveWallet(wallet);
+        ensureActiveBankAccount(bankAccount);
+        ensureActiveBank(bank);
 
         BigDecimal amount = request.getAmount();
         if (Constant.WALLET_TRANSACTION_TYPE_BANK_TO_WALLET.equals(transactionType)) {
+            ensureEnoughBalance(
+                    bank.getBalance(),
+                    amount,
+                    Constant.MESSAGE_INSUFFICIENT_BANK_BALANCE,
+                    Constant.ERROR_INSUFFICIENT_BANK_BALANCE
+            );
+            bank.setBalance(bank.getBalance().subtract(amount));
             wallet.setAvailableBalance(wallet.getAvailableBalance().add(amount));
         } else {
             ensureEnoughBalance(
@@ -291,6 +315,7 @@ public class WalletBankServiceImpl implements WalletBankService {
                     Constant.ERROR_INSUFFICIENT_WALLET_BALANCE
             );
             wallet.setAvailableBalance(wallet.getAvailableBalance().subtract(amount));
+            bank.setBalance(bank.getBalance().add(amount));
         }
 
         WalletTransactionDTO transactionDto = WalletTransactionDTO.builder()
@@ -340,6 +365,23 @@ public class WalletBankServiceImpl implements WalletBankService {
         }
     }
 
+    private void ensureSameBankTransferPayload(
+            WalletTransactionEntity transaction,
+            WalletBankTransferRequest request,
+            String transactionType
+    ) {
+        boolean sameTransferType = transactionType.equals(transaction.getType());
+        boolean sameAmount = transaction.getAmount().compareTo(request.getAmount()) == 0;
+        boolean sameLinkedBankAccount = transaction.getLinkedBankAccount() != null
+                && request.getLinkedBankAccountId().equals(transaction.getLinkedBankAccount().getId());
+        if (!sameTransferType || !sameAmount || !sameLinkedBankAccount) {
+            throw new AuthException(
+                    Constant.MESSAGE_IDEMPOTENCY_PAYLOAD_MISMATCH,
+                    Constant.ERROR_IDEMPOTENCY_PAYLOAD_MISMATCH
+            );
+        }
+    }
+
     private void ensureActiveUser(UserEntity user) {
         if (user == null || !Constant.STATUS_ACTIVE.equalsIgnoreCase(user.getStatus())) {
             throw new AuthException(Constant.MESSAGE_USER_NOT_ACTIVE, Constant.ERROR_USER_NOT_ACTIVE);
@@ -352,8 +394,20 @@ public class WalletBankServiceImpl implements WalletBankService {
         }
     }
 
+    private void ensureActiveBankAccount(LinkedBankAccountEntity bankAccount) {
+        if (bankAccount == null || !Constant.STATUS_ACTIVE.equalsIgnoreCase(bankAccount.getStatus())) {
+            throw new AuthException(Constant.MESSAGE_BANK_ACCOUNT_NOT_ACTIVE, Constant.ERROR_BANK_ACCOUNT_NOT_ACTIVE);
+        }
+    }
+
+    private void ensureActiveBank(BankEntity bank) {
+        if (bank == null || !Constant.STATUS_ACTIVE.equalsIgnoreCase(bank.getStatus())) {
+            throw new AuthException(Constant.MESSAGE_BANK_NOT_ACTIVE, Constant.ERROR_BANK_NOT_ACTIVE);
+        }
+    }
+
     private void ensureEnoughBalance(BigDecimal balance, BigDecimal amount, String message, String error) {
-        if (balance.compareTo(amount) < 0) {
+        if (balance == null || balance.compareTo(amount) < 0) {
             throw new AuthException(message, error);
         }
     }
@@ -391,6 +445,17 @@ public class WalletBankServiceImpl implements WalletBankService {
                 .availableBalance(wallet.getAvailableBalance())
                 .holdBalance(wallet.getHoldBalance())
                 .status(wallet.getStatus())
+                .build();
+    }
+
+    private BankResponse toBankResponse(BankEntity bank) {
+        return BankResponse.builder()
+                .id(bank.getId())
+                .bankCode(bank.getBankCode())
+                .bankName(bank.getBankName())
+                .accountNumber(bank.getAccountNumber())
+                .accountHolderName(bank.getAccountHolderName())
+                .status(bank.getStatus())
                 .build();
     }
 

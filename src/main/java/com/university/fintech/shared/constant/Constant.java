@@ -86,6 +86,7 @@ public class Constant {
     public static final String ERROR_BANK_ACCOUNT_NOT_FOUND = "BANK_ACCOUNT_NOT_FOUND";
     public static final String ERROR_BANK_ACCOUNT_ALREADY_LINKED = "BANK_ACCOUNT_ALREADY_LINKED";
     public static final String ERROR_INSUFFICIENT_WALLET_BALANCE = "INSUFFICIENT_WALLET_BALANCE";
+    public static final String ERROR_INSUFFICIENT_BANK_BALANCE = "INSUFFICIENT_BANK_BALANCE";
     public static final String ERROR_DUPLICATED_TRANSACTION = "DUPLICATED_TRANSACTION";
     public static final String ERROR_IDEMPOTENCY_PAYLOAD_MISMATCH = "IDEMPOTENCY_PAYLOAD_MISMATCH";
     public static final String ERROR_TRANSACTION_NOT_FOUND = "TRANSACTION_NOT_FOUND";
@@ -93,6 +94,8 @@ public class Constant {
     public static final String ERROR_SELF_WALLET_TRANSFER = "SELF_WALLET_TRANSFER";
     public static final String ERROR_USER_NOT_ACTIVE = "USER_NOT_ACTIVE";
     public static final String ERROR_WALLET_NOT_ACTIVE = "WALLET_NOT_ACTIVE";
+    public static final String ERROR_BANK_NOT_ACTIVE = "BANK_NOT_ACTIVE";
+    public static final String ERROR_BANK_ACCOUNT_NOT_ACTIVE = "BANK_ACCOUNT_NOT_ACTIVE";
 
     public static final String MESSAGE_EMAIL_ALREADY_EXISTS = "Email already exists.";
     public static final String MESSAGE_PHONE_NUMBER_ALREADY_EXISTS = "Phone number already exists.";
@@ -113,6 +116,7 @@ public class Constant {
     public static final String MESSAGE_BANK_ACCOUNT_NOT_FOUND = "Linked bank account was not found.";
     public static final String MESSAGE_BANK_ACCOUNT_ALREADY_LINKED = "Bank is already linked to this wallet.";
     public static final String MESSAGE_INSUFFICIENT_WALLET_BALANCE = "Wallet balance is insufficient.";
+    public static final String MESSAGE_INSUFFICIENT_BANK_BALANCE = "Bank account balance is insufficient.";
     public static final String MESSAGE_DUPLICATED_TRANSACTION = "Transaction idempotency key already exists.";
     public static final String MESSAGE_IDEMPOTENCY_PAYLOAD_MISMATCH = "Transaction idempotency key was already used with different transfer details.";
     public static final String MESSAGE_TRANSACTION_NOT_FOUND = "Transaction was not found.";
@@ -120,6 +124,8 @@ public class Constant {
     public static final String MESSAGE_SELF_WALLET_TRANSFER = "Cannot transfer money to your own wallet.";
     public static final String MESSAGE_USER_NOT_ACTIVE = "User is not active.";
     public static final String MESSAGE_WALLET_NOT_ACTIVE = "Wallet is not active.";
+    public static final String MESSAGE_BANK_NOT_ACTIVE = "Bank is not active.";
+    public static final String MESSAGE_BANK_ACCOUNT_NOT_ACTIVE = "Linked bank account is not active.";
     public static final String MESSAGE_BUILD_VERIFICATION_EMAIL_FAILED = "Could not build verification email.";
     public static final String MESSAGE_LOAD_VERIFICATION_EMAIL_TEMPLATE_FAILED = "Could not load verification email template.";
     public static final String PHONE_NUMBER_NUMERIC_PATTERN = "^\\d+$";

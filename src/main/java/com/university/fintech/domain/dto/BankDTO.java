@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -27,6 +28,8 @@ public class BankDTO {
     private String accountHolderName;
 
     private String status;
+
+    private BigDecimal balance;
 
     private OffsetDateTime createdAt;
 

@@ -6,6 +6,7 @@ import com.university.fintech.infrastructure.primary.restful.request.wallet.Wall
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletRecipientLookupRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransactionHistoryRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransferRequest;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.BankResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRecipientLookupResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
@@ -36,6 +37,11 @@ public class WalletOperator {
     @GetMapping
     public WalletResponse getWallet(Authentication authentication) {
         return walletBankService.getWallet(extractUserId(authentication));
+    }
+
+    @GetMapping("/banks")
+    public List<BankResponse> getBanks() {
+        return walletBankService.getBanks();
     }
 
     @PostMapping("/bank-accounts")
