@@ -6,7 +6,6 @@ import com.university.fintech.infrastructure.primary.restful.request.wallet.Wall
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletRecipientLookupRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransactionHistoryRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransferRequest;
-import com.university.fintech.infrastructure.primary.restful.response.PageResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRecipientLookupResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
@@ -15,7 +14,6 @@ import com.university.fintech.infrastructure.primary.restful.response.wallet.Wal
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -94,10 +92,9 @@ public class WalletOperator {
     }
 
     @PostMapping("/transactions/search")
-    public PageResponse<WalletTransactionHistoryResponse> getTransactions(
+    public WalletTransactionHistoryResponse getTransactions(
             Authentication authentication,
-            @RequestBody(required = false) WalletTransactionHistoryRequest request,
-            Pageable pageable
+            @RequestBody(required = false) WalletTransactionHistoryRequest request
     ) {
         WalletTransactionHistoryRequest safeRequest = request == null ? new WalletTransactionHistoryRequest() : request;
         return walletBankService.getTransactions(
@@ -106,7 +103,7 @@ public class WalletOperator {
                 safeRequest.getStatus(),
                 safeRequest.getFrom(),
                 safeRequest.getTo(),
-                pageable
+                safeRequest.toPageable()
         );
     }
 

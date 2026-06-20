@@ -16,7 +16,6 @@ import com.university.fintech.infrastructure.primary.restful.request.wallet.Link
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletBankTransferRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletRecipientLookupRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransferRequest;
-import com.university.fintech.infrastructure.primary.restful.response.PageResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRecipientLookupResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
@@ -201,7 +200,7 @@ public class WalletBankServiceImpl implements WalletBankService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<WalletTransactionHistoryResponse> getTransactions(
+    public WalletTransactionHistoryResponse getTransactions(
             UUID userId,
             String type,
             String status,
@@ -215,7 +214,7 @@ public class WalletBankServiceImpl implements WalletBankService {
         Pageable sortedPageable = pageable.getSort().isSorted()
                 ? pageable
                 : PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "updatedAt"));
-        return PageResponse.of(
+        return WalletTransactionHistoryResponse.fromPage(
                 walletTransactionRepository.findAll(
                         walletTransactionHistorySpecification(
                         userId,
@@ -226,7 +225,7 @@ public class WalletBankServiceImpl implements WalletBankService {
                         ),
                         sortedPageable
                 ),
-                entity -> toWalletTransactionHistoryResponse(walletTransactionMapper.toDto(entity))
+                entity -> toWalletTransactionHistoryItem(walletTransactionMapper.toDto(entity))
         );
     }
 
@@ -410,8 +409,8 @@ public class WalletBankServiceImpl implements WalletBankService {
                 .build();
     }
 
-    private WalletTransactionHistoryResponse toWalletTransactionHistoryResponse(WalletTransactionDTO transaction) {
-        return WalletTransactionHistoryResponse.builder()
+    private WalletTransactionHistoryResponse.Item toWalletTransactionHistoryItem(WalletTransactionDTO transaction) {
+        return WalletTransactionHistoryResponse.Item.builder()
                 .amount(transaction.getAmount())
                 .type(transaction.getType())
                 .status(transaction.getStatus())

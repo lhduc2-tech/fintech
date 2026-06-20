@@ -4,7 +4,6 @@ import com.university.fintech.infrastructure.primary.restful.request.wallet.Link
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletBankTransferRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletRecipientLookupRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransferRequest;
-import com.university.fintech.infrastructure.primary.restful.response.PageResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRecipientLookupResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
@@ -35,7 +34,7 @@ public interface WalletBankService {
 
     WalletTransactionDetailResponse getTransactionDetail(UUID userId, UUID transactionId);
 
-    PageResponse<WalletTransactionHistoryResponse> getTransactions(
+    WalletTransactionHistoryResponse getTransactions(
             UUID userId,
             String type,
             String status,
