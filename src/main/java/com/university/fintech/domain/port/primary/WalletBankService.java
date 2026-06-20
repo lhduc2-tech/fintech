@@ -2,9 +2,11 @@ package com.university.fintech.domain.port.primary;
 
 import com.university.fintech.infrastructure.primary.restful.request.wallet.LinkBankAccountRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletBankTransferRequest;
+import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletRecipientLookupRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransferRequest;
 import com.university.fintech.infrastructure.primary.restful.response.PageResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRecipientLookupResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionHistoryResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionResponse;
@@ -27,6 +29,8 @@ public interface WalletBankService {
     WalletTransactionResponse withdrawToBank(UUID userId, WalletBankTransferRequest request);
 
     WalletTransactionResponse transferToWallet(UUID userId, WalletTransferRequest request);
+
+    WalletRecipientLookupResponse lookupTransferRecipient(UUID userId, WalletRecipientLookupRequest request);
 
     PageResponse<WalletTransactionHistoryResponse> getTransactions(
             UUID userId,

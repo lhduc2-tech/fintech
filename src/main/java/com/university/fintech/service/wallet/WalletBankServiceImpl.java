@@ -14,9 +14,11 @@ import com.university.fintech.domain.port.primary.WalletBankService;
 import com.university.fintech.exception.domain.AuthException;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.LinkBankAccountRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletBankTransferRequest;
+import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletRecipientLookupRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransferRequest;
 import com.university.fintech.infrastructure.primary.restful.response.PageResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRecipientLookupResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionHistoryResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionResponse;
@@ -132,11 +134,7 @@ public class WalletBankServiceImpl implements WalletBankService {
             return toWalletTransactionResponse(walletTransactionMapper.toDto(transaction));
         }
 
-        UserEntity recipient = userRepository.findByPhoneNumber(request.getRecipientPhoneNumber().trim())
-                .orElseThrow(() -> new AuthException(Constant.MESSAGE_RECIPIENT_NOT_FOUND, Constant.ERROR_RECIPIENT_NOT_FOUND));
-        if (recipient.getId().equals(userId)) {
-            throw new AuthException(Constant.MESSAGE_SELF_WALLET_TRANSFER, Constant.ERROR_SELF_WALLET_TRANSFER);
-        }
+        UserEntity recipient = findTransferRecipient(userId, request.getRecipientPhoneNumber());
 
         List<UUID> orderedUserIds = List.of(userId, recipient.getId()).stream()
                 .sorted(Comparator.naturalOrder())
@@ -183,6 +181,15 @@ public class WalletBankServiceImpl implements WalletBankService {
 
         walletTransactionRepository.save(creditTransaction);
         return toWalletTransactionResponse(walletTransactionMapper.toDto(walletTransactionRepository.save(debitTransaction)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public WalletRecipientLookupResponse lookupTransferRecipient(UUID userId, WalletRecipientLookupRequest request) {
+        UserEntity recipient = findTransferRecipient(userId, request.getRecipientPhoneNumber());
+        return WalletRecipientLookupResponse.builder()
+                .fullName(recipient.getFullName())
+                .build();
     }
 
     @Override
@@ -296,6 +303,15 @@ public class WalletBankServiceImpl implements WalletBankService {
     private WalletEntity findWallet(UUID userId) {
         return walletRepository.findByUserId(userId)
                 .orElseThrow(() -> new AuthException(Constant.MESSAGE_WALLET_NOT_FOUND, Constant.ERROR_WALLET_NOT_FOUND));
+    }
+
+    private UserEntity findTransferRecipient(UUID userId, String recipientPhoneNumber) {
+        UserEntity recipient = userRepository.findByPhoneNumber(recipientPhoneNumber.trim())
+                .orElseThrow(() -> new AuthException(Constant.MESSAGE_RECIPIENT_NOT_FOUND, Constant.ERROR_RECIPIENT_NOT_FOUND));
+        if (recipient.getId().equals(userId)) {
+            throw new AuthException(Constant.MESSAGE_SELF_WALLET_TRANSFER, Constant.ERROR_SELF_WALLET_TRANSFER);
+        }
+        return recipient;
     }
 
     private void ensureEnoughBalance(BigDecimal balance, BigDecimal amount, String message, String error) {

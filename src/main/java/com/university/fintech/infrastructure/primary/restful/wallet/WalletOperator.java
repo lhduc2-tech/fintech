@@ -3,10 +3,12 @@ package com.university.fintech.infrastructure.primary.restful.wallet;
 import com.university.fintech.domain.port.primary.WalletBankService;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.LinkBankAccountRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletBankTransferRequest;
+import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletRecipientLookupRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransactionHistoryRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransferRequest;
 import com.university.fintech.infrastructure.primary.restful.response.PageResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRecipientLookupResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionHistoryResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionResponse;
@@ -71,6 +73,14 @@ public class WalletOperator {
             @Valid @RequestBody WalletTransferRequest request
     ) {
         return walletBankService.transferToWallet(extractUserId(authentication), request);
+    }
+
+    @GetMapping("/transfer/recipient")
+    public WalletRecipientLookupResponse lookupTransferRecipient(
+            Authentication authentication,
+            @Valid WalletRecipientLookupRequest request
+    ) {
+        return walletBankService.lookupTransferRecipient(extractUserId(authentication), request);
     }
 
     @PostMapping("/transactions/search")
