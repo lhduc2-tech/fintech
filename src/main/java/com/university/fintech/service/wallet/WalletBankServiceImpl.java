@@ -131,6 +131,7 @@ public class WalletBankServiceImpl implements WalletBankService {
             if (!transaction.getUser().getId().equals(userId)) {
                 throw new AuthException(Constant.MESSAGE_DUPLICATED_TRANSACTION, Constant.ERROR_DUPLICATED_TRANSACTION);
             }
+            ensureSameWalletTransferPayload(transaction, request);
             return toWalletTransactionResponse(walletTransactionMapper.toDto(transaction));
         }
 
@@ -146,6 +147,10 @@ public class WalletBankServiceImpl implements WalletBankService {
 
         WalletEntity senderWallet = firstWallet.getUser().getId().equals(userId) ? firstWallet : secondWallet;
         WalletEntity recipientWallet = firstWallet.getUser().getId().equals(recipient.getId()) ? firstWallet : secondWallet;
+        ensureActiveUser(senderWallet.getUser());
+        ensureActiveUser(recipientWallet.getUser());
+        ensureActiveWallet(senderWallet);
+        ensureActiveWallet(recipientWallet);
         BigDecimal amount = request.getAmount();
         ensureEnoughBalance(
                 senderWallet.getAvailableBalance(),
@@ -318,6 +323,33 @@ public class WalletBankServiceImpl implements WalletBankService {
             throw new AuthException(Constant.MESSAGE_SELF_WALLET_TRANSFER, Constant.ERROR_SELF_WALLET_TRANSFER);
         }
         return recipient;
+    }
+
+    private void ensureSameWalletTransferPayload(WalletTransactionEntity transaction, WalletTransferRequest request) {
+        String recipientPhoneNumber = request.getRecipientPhoneNumber().trim();
+        boolean sameTransferType = Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_OUT.equals(transaction.getType());
+        boolean sameAmount = transaction.getAmount().compareTo(request.getAmount()) == 0;
+        boolean sameRecipient = transaction.getCounterpartyWallet() != null
+                && transaction.getCounterpartyWallet().getUser() != null
+                && recipientPhoneNumber.equals(transaction.getCounterpartyWallet().getUser().getPhoneNumber());
+        if (!sameTransferType || !sameAmount || !sameRecipient) {
+            throw new AuthException(
+                    Constant.MESSAGE_IDEMPOTENCY_PAYLOAD_MISMATCH,
+                    Constant.ERROR_IDEMPOTENCY_PAYLOAD_MISMATCH
+            );
+        }
+    }
+
+    private void ensureActiveUser(UserEntity user) {
+        if (user == null || !Constant.STATUS_ACTIVE.equalsIgnoreCase(user.getStatus())) {
+            throw new AuthException(Constant.MESSAGE_USER_NOT_ACTIVE, Constant.ERROR_USER_NOT_ACTIVE);
+        }
+    }
+
+    private void ensureActiveWallet(WalletEntity wallet) {
+        if (wallet == null || !Constant.STATUS_ACTIVE.equalsIgnoreCase(wallet.getStatus())) {
+            throw new AuthException(Constant.MESSAGE_WALLET_NOT_ACTIVE, Constant.ERROR_WALLET_NOT_ACTIVE);
+        }
     }
 
     private void ensureEnoughBalance(BigDecimal balance, BigDecimal amount, String message, String error) {
