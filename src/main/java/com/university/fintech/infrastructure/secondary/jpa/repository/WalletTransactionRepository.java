@@ -16,4 +16,6 @@ public interface WalletTransactionRepository extends BaseJPARepository<WalletTra
     Optional<WalletTransactionEntity> findByIdempotencyKey(String idempotencyKey);
 
     Page<WalletTransactionEntity> findAllByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
+
+    Optional<WalletTransactionEntity> findByIdAndUserId(UUID id, UUID userId);
 }

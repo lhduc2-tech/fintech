@@ -10,6 +10,7 @@ import com.university.fintech.infrastructure.primary.restful.response.PageRespon
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRecipientLookupResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionDetailResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionHistoryResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionResponse;
 import jakarta.validation.Valid;
@@ -17,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -81,6 +83,14 @@ public class WalletOperator {
             @Valid WalletRecipientLookupRequest request
     ) {
         return walletBankService.lookupTransferRecipient(extractUserId(authentication), request);
+    }
+
+    @GetMapping("/transactions/{id}")
+    public WalletTransactionDetailResponse getTransactionDetail(
+            Authentication authentication,
+            @PathVariable UUID id
+    ) {
+        return walletBankService.getTransactionDetail(extractUserId(authentication), id);
     }
 
     @PostMapping("/transactions/search")

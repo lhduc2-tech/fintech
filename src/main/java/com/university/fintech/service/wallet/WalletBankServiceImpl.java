@@ -20,6 +20,7 @@ import com.university.fintech.infrastructure.primary.restful.response.PageRespon
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRecipientLookupResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionDetailResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionHistoryResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionResponse;
 import com.university.fintech.infrastructure.secondary.jpa.repository.BankRepository;
@@ -162,7 +163,6 @@ public class WalletBankServiceImpl implements WalletBankService {
                 senderWallet,
                 recipientWallet,
                 userId,
-                recipient.getId(),
                 Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_OUT,
                 amount,
                 idempotencyKey,
@@ -172,7 +172,6 @@ public class WalletBankServiceImpl implements WalletBankService {
                 recipientWallet,
                 senderWallet,
                 recipient.getId(),
-                userId,
                 Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_IN,
                 amount,
                 idempotencyKey + Constant.WALLET_TRANSFER_CREDIT_IDEMPOTENCY_SUFFIX,
@@ -181,6 +180,14 @@ public class WalletBankServiceImpl implements WalletBankService {
 
         walletTransactionRepository.save(creditTransaction);
         return toWalletTransactionResponse(walletTransactionMapper.toDto(walletTransactionRepository.save(debitTransaction)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public WalletTransactionDetailResponse getTransactionDetail(UUID userId, UUID transactionId) {
+        WalletTransactionEntity transaction = walletTransactionRepository.findByIdAndUserId(transactionId, userId)
+                .orElseThrow(() -> new AuthException(Constant.MESSAGE_TRANSACTION_NOT_FOUND, Constant.ERROR_TRANSACTION_NOT_FOUND));
+        return toWalletTransactionDetailResponse(transaction);
     }
 
     @Override
@@ -324,7 +331,6 @@ public class WalletBankServiceImpl implements WalletBankService {
             WalletEntity wallet,
             WalletEntity counterpartyWallet,
             UUID userId,
-            UUID counterpartyUserId,
             String type,
             BigDecimal amount,
             String idempotencyKey,
@@ -334,7 +340,6 @@ public class WalletBankServiceImpl implements WalletBankService {
                 .walletId(wallet.getId())
                 .userId(userId)
                 .counterpartyWalletId(counterpartyWallet.getId())
-                .counterpartyUserId(counterpartyUserId)
                 .type(type)
                 .amount(amount)
                 .status(Constant.STATUS_SUCCESS)
@@ -346,7 +351,6 @@ public class WalletBankServiceImpl implements WalletBankService {
         transaction.setWallet(wallet);
         transaction.setUser(userRepository.getReferenceById(userId));
         transaction.setCounterpartyWallet(counterpartyWallet);
-        transaction.setCounterpartyUser(userRepository.getReferenceById(counterpartyUserId));
         return transaction;
     }
 
@@ -378,7 +382,6 @@ public class WalletBankServiceImpl implements WalletBankService {
                 .walletId(transaction.getWalletId())
                 .linkedBankAccountId(transaction.getLinkedBankAccountId())
                 .counterpartyWalletId(transaction.getCounterpartyWalletId())
-                .counterpartyUserId(transaction.getCounterpartyUserId())
                 .type(transaction.getType())
                 .amount(transaction.getAmount())
                 .status(transaction.getStatus())
@@ -387,6 +390,23 @@ public class WalletBankServiceImpl implements WalletBankService {
                 .createdAt(transaction.getCreatedAt())
                 .updatedAt(transaction.getUpdatedAt())
                 .description(transaction.getDescription())
+                .build();
+    }
+
+    private WalletTransactionDetailResponse toWalletTransactionDetailResponse(WalletTransactionEntity transaction) {
+        UserEntity user = transaction.getUser();
+        UserEntity counterpartyUser = transaction.getCounterpartyWallet() == null
+                ? null
+                : transaction.getCounterpartyWallet().getUser();
+        return WalletTransactionDetailResponse.builder()
+                .fullName(user.getFullName())
+                .phoneNumber(user.getPhoneNumber())
+                .type(transaction.getType())
+                .amount(transaction.getAmount())
+                .status(transaction.getStatus())
+                .updatedAt(transaction.getUpdatedAt())
+                .counterpartyFullName(counterpartyUser == null ? null : counterpartyUser.getFullName())
+                .counterpartyPhoneNumber(counterpartyUser == null ? null : counterpartyUser.getPhoneNumber())
                 .build();
     }
 

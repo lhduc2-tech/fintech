@@ -13,7 +13,6 @@ public interface WalletTransactionMapper extends BaseMapper<WalletTransactionEnt
     @Mapping(target = "userId", source = "user.id")
     @Mapping(target = "linkedBankAccountId", source = "linkedBankAccount.id")
     @Mapping(target = "counterpartyWalletId", source = "counterpartyWallet.id")
-    @Mapping(target = "counterpartyUserId", source = "counterpartyUser.id")
     WalletTransactionDTO toDto(WalletTransactionEntity entity);
 
     @Override
@@ -21,6 +20,5 @@ public interface WalletTransactionMapper extends BaseMapper<WalletTransactionEnt
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "linkedBankAccount", ignore = true)
     @Mapping(target = "counterpartyWallet", ignore = true)
-    @Mapping(target = "counterpartyUser", ignore = true)
     WalletTransactionEntity toEntity(WalletTransactionDTO dto);
 }

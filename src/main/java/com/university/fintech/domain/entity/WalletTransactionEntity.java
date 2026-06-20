@@ -47,10 +47,6 @@ public class WalletTransactionEntity extends BaseAuditing {
     @JoinColumn(name = "counterparty_wallet_id")
     private WalletEntity counterpartyWallet;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "counterparty_user_id")
-    private UserEntity counterpartyUser;
-
     @Column(name = "type", nullable = false)
     private String type;
 

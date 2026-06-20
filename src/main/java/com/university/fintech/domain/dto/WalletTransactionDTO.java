@@ -27,8 +27,6 @@ public class WalletTransactionDTO {
 
     private UUID counterpartyWalletId;
 
-    private UUID counterpartyUserId;
-
     private String type;
 
     private BigDecimal amount;

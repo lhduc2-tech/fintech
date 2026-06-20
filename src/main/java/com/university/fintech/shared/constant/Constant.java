@@ -87,6 +87,7 @@ public class Constant {
     public static final String ERROR_BANK_ACCOUNT_ALREADY_LINKED = "BANK_ACCOUNT_ALREADY_LINKED";
     public static final String ERROR_INSUFFICIENT_WALLET_BALANCE = "INSUFFICIENT_WALLET_BALANCE";
     public static final String ERROR_DUPLICATED_TRANSACTION = "DUPLICATED_TRANSACTION";
+    public static final String ERROR_TRANSACTION_NOT_FOUND = "TRANSACTION_NOT_FOUND";
     public static final String ERROR_RECIPIENT_NOT_FOUND = "RECIPIENT_NOT_FOUND";
     public static final String ERROR_SELF_WALLET_TRANSFER = "SELF_WALLET_TRANSFER";
 
@@ -110,6 +111,7 @@ public class Constant {
     public static final String MESSAGE_BANK_ACCOUNT_ALREADY_LINKED = "Bank is already linked to this wallet.";
     public static final String MESSAGE_INSUFFICIENT_WALLET_BALANCE = "Wallet balance is insufficient.";
     public static final String MESSAGE_DUPLICATED_TRANSACTION = "Transaction idempotency key already exists.";
+    public static final String MESSAGE_TRANSACTION_NOT_FOUND = "Transaction was not found.";
     public static final String MESSAGE_RECIPIENT_NOT_FOUND = "Recipient was not found.";
     public static final String MESSAGE_SELF_WALLET_TRANSFER = "Cannot transfer money to your own wallet.";
     public static final String MESSAGE_BUILD_VERIFICATION_EMAIL_FAILED = "Could not build verification email.";
