@@ -38,4 +38,8 @@ public class WalletTransactionResponse {
     private String referenceCode;
 
     private OffsetDateTime createdAt;
+
+    private OffsetDateTime updatedAt;
+
+    private String description;
 }

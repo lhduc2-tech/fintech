@@ -3,10 +3,12 @@ package com.university.fintech.infrastructure.primary.restful.wallet;
 import com.university.fintech.domain.port.primary.WalletBankService;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.LinkBankAccountRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletBankTransferRequest;
+import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransactionHistoryRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransferRequest;
 import com.university.fintech.infrastructure.primary.restful.response.PageResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionHistoryResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -71,9 +73,21 @@ public class WalletOperator {
         return walletBankService.transferToWallet(extractUserId(authentication), request);
     }
 
-    @GetMapping("/transactions")
-    public PageResponse<WalletTransactionResponse> getTransactions(Authentication authentication, Pageable pageable) {
-        return walletBankService.getTransactions(extractUserId(authentication), pageable);
+    @PostMapping("/transactions/search")
+    public PageResponse<WalletTransactionHistoryResponse> getTransactions(
+            Authentication authentication,
+            @RequestBody(required = false) WalletTransactionHistoryRequest request,
+            Pageable pageable
+    ) {
+        WalletTransactionHistoryRequest safeRequest = request == null ? new WalletTransactionHistoryRequest() : request;
+        return walletBankService.getTransactions(
+                extractUserId(authentication),
+                safeRequest.getType(),
+                safeRequest.getStatus(),
+                safeRequest.getFrom(),
+                safeRequest.getTo(),
+                pageable
+        );
     }
 
     @SuppressWarnings("unchecked")

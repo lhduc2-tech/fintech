@@ -39,6 +39,8 @@ public class WalletTransactionDTO {
 
     private String referenceCode;
 
+    private String description;
+
     private OffsetDateTime createdAt;
 
     private String createdBy;

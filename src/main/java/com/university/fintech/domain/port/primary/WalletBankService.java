@@ -6,9 +6,11 @@ import com.university.fintech.infrastructure.primary.restful.request.wallet.Wall
 import com.university.fintech.infrastructure.primary.restful.response.PageResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionHistoryResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionResponse;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,5 +28,12 @@ public interface WalletBankService {
 
     WalletTransactionResponse transferToWallet(UUID userId, WalletTransferRequest request);
 
-    PageResponse<WalletTransactionResponse> getTransactions(UUID userId, Pageable pageable);
+    PageResponse<WalletTransactionHistoryResponse> getTransactions(
+            UUID userId,
+            String type,
+            String status,
+            LocalDate updatedAtFrom,
+            LocalDate updatedAtTo,
+            Pageable pageable
+    );
 }

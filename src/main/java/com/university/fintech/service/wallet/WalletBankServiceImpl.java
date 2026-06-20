@@ -18,6 +18,7 @@ import com.university.fintech.infrastructure.primary.restful.request.wallet.Wall
 import com.university.fintech.infrastructure.primary.restful.response.PageResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionHistoryResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionResponse;
 import com.university.fintech.infrastructure.secondary.jpa.repository.BankRepository;
 import com.university.fintech.infrastructure.secondary.jpa.repository.LinkedBankAccountRepository;
@@ -26,11 +27,19 @@ import com.university.fintech.infrastructure.secondary.jpa.repository.WalletRepo
 import com.university.fintech.infrastructure.secondary.jpa.repository.WalletTransactionRepository;
 import com.university.fintech.shared.constant.Constant;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.criteria.Predicate;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -178,11 +187,59 @@ public class WalletBankServiceImpl implements WalletBankService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<WalletTransactionResponse> getTransactions(UUID userId, Pageable pageable) {
+    public PageResponse<WalletTransactionHistoryResponse> getTransactions(
+            UUID userId,
+            String type,
+            String status,
+            LocalDate updatedAtFrom,
+            LocalDate updatedAtTo,
+            Pageable pageable
+    ) {
+        ZoneId zoneId = ZoneId.systemDefault();
+        OffsetDateTime updatedAtFromTime = updatedAtFrom == null ? null : updatedAtFrom.atStartOfDay(zoneId).toOffsetDateTime();
+        OffsetDateTime updatedAtToTime = updatedAtTo == null ? null : updatedAtTo.plusDays(1).atStartOfDay(zoneId).toOffsetDateTime();
+        Pageable sortedPageable = pageable.getSort().isSorted()
+                ? pageable
+                : PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "updatedAt"));
         return PageResponse.of(
-                walletTransactionRepository.findAllByUserIdOrderByCreatedAtDesc(userId, pageable),
-                entity -> toWalletTransactionResponse(walletTransactionMapper.toDto(entity))
+                walletTransactionRepository.findAll(
+                        walletTransactionHistorySpecification(
+                        userId,
+                        trimToUpperOrNull(type),
+                        trimToUpperOrNull(status),
+                        updatedAtFromTime,
+                        updatedAtToTime
+                        ),
+                        sortedPageable
+                ),
+                entity -> toWalletTransactionHistoryResponse(walletTransactionMapper.toDto(entity))
         );
+    }
+
+    private Specification<WalletTransactionEntity> walletTransactionHistorySpecification(
+            UUID userId,
+            String type,
+            String status,
+            OffsetDateTime updatedAtFrom,
+            OffsetDateTime updatedAtTo
+    ) {
+        return (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(criteriaBuilder.equal(root.get("user").get("id"), userId));
+            if (type != null) {
+                predicates.add(criteriaBuilder.equal(root.get("type"), type));
+            }
+            if (status != null) {
+                predicates.add(criteriaBuilder.equal(root.get("status"), status));
+            }
+            if (updatedAtFrom != null) {
+                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("updatedAt"), updatedAtFrom));
+            }
+            if (updatedAtTo != null) {
+                predicates.add(criteriaBuilder.lessThan(root.get("updatedAt"), updatedAtTo));
+            }
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
     }
 
     private WalletTransactionResponse executeTransfer(
@@ -227,6 +284,7 @@ public class WalletBankServiceImpl implements WalletBankService {
                 .status(Constant.STATUS_SUCCESS)
                 .idempotencyKey(idempotencyKey)
                 .referenceCode(UUID.randomUUID().toString())
+                .description(buildBankTransferDescription(transactionType, bankAccount))
                 .build();
         WalletTransactionEntity transaction = walletTransactionMapper.toEntity(transactionDto);
         transaction.setWallet(wallet);
@@ -266,6 +324,7 @@ public class WalletBankServiceImpl implements WalletBankService {
                 .status(Constant.STATUS_SUCCESS)
                 .idempotencyKey(idempotencyKey)
                 .referenceCode(referenceCode)
+                .description(buildWalletTransferDescription(type, counterpartyWallet.getUser()))
                 .build();
         WalletTransactionEntity transaction = walletTransactionMapper.toEntity(transactionDto);
         transaction.setWallet(wallet);
@@ -310,7 +369,42 @@ public class WalletBankServiceImpl implements WalletBankService {
                 .idempotencyKey(transaction.getIdempotencyKey())
                 .referenceCode(transaction.getReferenceCode())
                 .createdAt(transaction.getCreatedAt())
+                .updatedAt(transaction.getUpdatedAt())
+                .description(transaction.getDescription())
                 .build();
+    }
+
+    private WalletTransactionHistoryResponse toWalletTransactionHistoryResponse(WalletTransactionDTO transaction) {
+        return WalletTransactionHistoryResponse.builder()
+                .amount(transaction.getAmount())
+                .type(transaction.getType())
+                .status(transaction.getStatus())
+                .updatedAt(transaction.getUpdatedAt())
+                .description(transaction.getDescription())
+                .build();
+    }
+
+    private String buildBankTransferDescription(String transactionType, LinkedBankAccountEntity bankAccount) {
+        String bankCode = bankAccount.getBank().getBankCode();
+        String accountNumber = bankAccount.getBank().getAccountNumber();
+        if (Constant.WALLET_TRANSACTION_TYPE_BANK_TO_WALLET.equals(transactionType)) {
+            return "Nap tien tu tai khoan ngan hang " + bankCode + " " + accountNumber;
+        }
+        return "Rut tien ve tai khoan ngan hang " + bankCode + " " + accountNumber;
+    }
+
+    private String buildWalletTransferDescription(String transactionType, UserEntity counterpartyUser) {
+        if (Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_OUT.equals(transactionType)) {
+            return "Chuyen tien den " + counterpartyUser.getPhoneNumber();
+        }
+        return "Nhan tien tu " + counterpartyUser.getPhoneNumber();
+    }
+
+    private String trimToUpperOrNull(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        return value.trim().toUpperCase();
     }
 
 }

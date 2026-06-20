@@ -66,6 +66,9 @@ public class WalletTransactionEntity extends BaseAuditing {
     @Column(name = "reference_code", nullable = false)
     private String referenceCode;
 
+    @Column(name = "description")
+    private String description;
+
     @PrePersist
     public void prePersist() {
         if (id == null) {
