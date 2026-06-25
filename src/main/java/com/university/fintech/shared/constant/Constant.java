@@ -97,6 +97,7 @@ public class Constant {
     public static final String ERROR_WALLET_NOT_ACTIVE = "WALLET_NOT_ACTIVE";
     public static final String ERROR_BANK_NOT_ACTIVE = "BANK_NOT_ACTIVE";
     public static final String ERROR_BANK_ACCOUNT_NOT_ACTIVE = "BANK_ACCOUNT_NOT_ACTIVE";
+    public static final String ERROR_WALLET_TRANSACTION_AMOUNT_LIMIT_EXCEEDED = "WALLET_TRANSACTION_AMOUNT_LIMIT_EXCEEDED";
 
     public static final String MESSAGE_EMAIL_ALREADY_EXISTS = "Email already exists.";
     public static final String MESSAGE_PHONE_NUMBER_ALREADY_EXISTS = "Phone number already exists.";
@@ -127,6 +128,11 @@ public class Constant {
     public static final String MESSAGE_WALLET_NOT_ACTIVE = "Wallet is not active.";
     public static final String MESSAGE_BANK_NOT_ACTIVE = "Bank is not active.";
     public static final String MESSAGE_BANK_ACCOUNT_NOT_ACTIVE = "Linked bank account is not active.";
+    public static final String MESSAGE_WALLET_TRANSACTION_AMOUNT_POSITIVE = "Amount must be greater than 0.";
+    public static final String MESSAGE_WALLET_TRANSACTION_AMOUNT_INTEGER = "Amount must be an integer.";
+    public static final String MESSAGE_WALLET_TRANSACTION_AMOUNT_MAX_PER_TRANSACTION = "Amount must not exceed 50,000,000 per transaction.";
+    public static final String MESSAGE_WALLET_TRANSACTION_DAILY_LIMIT_EXCEEDED = "Daily wallet transaction limit exceeded.";
+    public static final String MESSAGE_WALLET_TRANSACTION_MONTHLY_LIMIT_EXCEEDED = "Monthly wallet transaction limit exceeded.";
     public static final String MESSAGE_BUILD_VERIFICATION_EMAIL_FAILED = "Could not build verification email.";
     public static final String MESSAGE_LOAD_VERIFICATION_EMAIL_TEMPLATE_FAILED = "Could not load verification email template.";
     public static final String PHONE_NUMBER_NUMERIC_PATTERN = "^\\d+$";
@@ -146,4 +152,7 @@ public class Constant {
     public static final String LEDGER_ENTRY_TYPE_DEBIT = "DEBIT";
     public static final String WALLET_PROCESSING_TEST_PENDING_TOKEN = "PENDING";
     public static final String WALLET_PROCESSING_TEST_FAILED_TOKEN = "FAILED";
+    public static final String WALLET_TRANSACTION_MAX_AMOUNT_PER_TRANSACTION = "50000000";
+    public static final String WALLET_TRANSACTION_DAILY_LIMIT = "100000000";
+    public static final String WALLET_TRANSACTION_MONTHLY_LIMIT = "500000000";
 }

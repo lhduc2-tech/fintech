@@ -174,6 +174,7 @@ public class WalletBankServiceImpl implements WalletBankService {
                 Constant.MESSAGE_INSUFFICIENT_WALLET_BALANCE,
                 Constant.ERROR_INSUFFICIENT_WALLET_BALANCE
         );
+        ensureWalletTransactionLimit(userId, amount);
 
         String referenceCode = UUID.randomUUID().toString();
         WalletTransactionEntity debitTransaction = buildWalletTransferTransaction(
@@ -343,6 +344,7 @@ public class WalletBankServiceImpl implements WalletBankService {
         ensureActiveBank(bank);
 
         BigDecimal amount = request.getAmount();
+        ensureWalletTransactionLimit(userId, amount);
         String referenceCode = UUID.randomUUID().toString();
         WalletTransactionDTO transactionDto = WalletTransactionDTO.builder()
                 .walletId(wallet.getId())
@@ -490,6 +492,58 @@ public class WalletBankServiceImpl implements WalletBankService {
         if (balance == null || balance.compareTo(amount) < 0) {
             throw new AuthException(message, error);
         }
+    }
+
+    private void ensureWalletTransactionLimit(UUID userId, BigDecimal amount) {
+        BigDecimal dailyLimit = new BigDecimal(Constant.WALLET_TRANSACTION_DAILY_LIMIT);
+        BigDecimal monthlyLimit = new BigDecimal(Constant.WALLET_TRANSACTION_MONTHLY_LIMIT);
+        ZoneId zoneId = ZoneId.systemDefault();
+        OffsetDateTime now = OffsetDateTime.now(zoneId);
+        OffsetDateTime startOfDay = now.toLocalDate().atStartOfDay(zoneId).toOffsetDateTime();
+        OffsetDateTime startOfNextDay = startOfDay.plusDays(1);
+        OffsetDateTime startOfMonth = now.toLocalDate()
+                .withDayOfMonth(1)
+                .atStartOfDay(zoneId)
+                .toOffsetDateTime();
+        OffsetDateTime startOfNextMonth = startOfMonth.plusMonths(1);
+        List<String> limitedTypes = List.of(
+                Constant.WALLET_TRANSACTION_TYPE_BANK_TO_WALLET,
+                Constant.WALLET_TRANSACTION_TYPE_WALLET_TO_BANK,
+                Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_OUT
+        );
+        List<String> countedStatuses = List.of(Constant.STATUS_PENDING, Constant.STATUS_SUCCESS);
+
+        BigDecimal dailyTotal = walletTransactionRepository.sumAmountByUserIdAndTypeInAndStatusInAndCreatedAtBetween(
+                userId,
+                limitedTypes,
+                countedStatuses,
+                startOfDay,
+                startOfNextDay
+        );
+        if (zeroIfNull(dailyTotal).add(amount).compareTo(dailyLimit) > 0) {
+            throw new AuthException(
+                    Constant.MESSAGE_WALLET_TRANSACTION_DAILY_LIMIT_EXCEEDED,
+                    Constant.ERROR_WALLET_TRANSACTION_AMOUNT_LIMIT_EXCEEDED
+            );
+        }
+
+        BigDecimal monthlyTotal = walletTransactionRepository.sumAmountByUserIdAndTypeInAndStatusInAndCreatedAtBetween(
+                userId,
+                limitedTypes,
+                countedStatuses,
+                startOfMonth,
+                startOfNextMonth
+        );
+        if (zeroIfNull(monthlyTotal).add(amount).compareTo(monthlyLimit) > 0) {
+            throw new AuthException(
+                    Constant.MESSAGE_WALLET_TRANSACTION_MONTHLY_LIMIT_EXCEEDED,
+                    Constant.ERROR_WALLET_TRANSACTION_AMOUNT_LIMIT_EXCEEDED
+            );
+        }
+    }
+
+    private BigDecimal zeroIfNull(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 
     private WalletTransactionEntity buildWalletTransferTransaction(
