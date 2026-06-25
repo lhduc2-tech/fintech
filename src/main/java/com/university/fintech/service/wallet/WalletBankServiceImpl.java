@@ -6,11 +6,15 @@ import com.university.fintech.domain.entity.BankEntity;
 import com.university.fintech.domain.entity.LinkedBankAccountEntity;
 import com.university.fintech.domain.entity.UserEntity;
 import com.university.fintech.domain.entity.WalletEntity;
+import com.university.fintech.domain.entity.WalletLedgerEntryEntity;
 import com.university.fintech.domain.entity.WalletTransactionEntity;
 import com.university.fintech.domain.mapper.LinkedBankAccountMapper;
 import com.university.fintech.domain.mapper.WalletMapper;
 import com.university.fintech.domain.mapper.WalletTransactionMapper;
 import com.university.fintech.domain.port.primary.WalletBankService;
+import com.university.fintech.domain.port.secondary.WalletTransactionProcessor;
+import com.university.fintech.domain.port.secondary.model.WalletProcessingRequest;
+import com.university.fintech.domain.port.secondary.model.WalletProcessingResult;
 import com.university.fintech.exception.domain.AuthException;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.LinkBankAccountRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletBankTransferRequest;
@@ -26,6 +30,7 @@ import com.university.fintech.infrastructure.primary.restful.response.wallet.Wal
 import com.university.fintech.infrastructure.secondary.jpa.repository.BankRepository;
 import com.university.fintech.infrastructure.secondary.jpa.repository.LinkedBankAccountRepository;
 import com.university.fintech.infrastructure.secondary.jpa.repository.UserRepository;
+import com.university.fintech.infrastructure.secondary.jpa.repository.WalletLedgerEntryRepository;
 import com.university.fintech.infrastructure.secondary.jpa.repository.WalletRepository;
 import com.university.fintech.infrastructure.secondary.jpa.repository.WalletTransactionRepository;
 import com.university.fintech.shared.constant.Constant;
@@ -56,6 +61,8 @@ public class WalletBankServiceImpl implements WalletBankService {
     private final WalletRepository walletRepository;
     private final LinkedBankAccountRepository linkedBankAccountRepository;
     private final WalletTransactionRepository walletTransactionRepository;
+    private final WalletLedgerEntryRepository walletLedgerEntryRepository;
+    private final WalletTransactionProcessor walletTransactionProcessor;
     private final WalletMapper walletMapper;
     private final LinkedBankAccountMapper linkedBankAccountMapper;
     private final WalletTransactionMapper walletTransactionMapper;
@@ -168,9 +175,6 @@ public class WalletBankServiceImpl implements WalletBankService {
                 Constant.ERROR_INSUFFICIENT_WALLET_BALANCE
         );
 
-        senderWallet.setAvailableBalance(senderWallet.getAvailableBalance().subtract(amount));
-        recipientWallet.setAvailableBalance(recipientWallet.getAvailableBalance().add(amount));
-
         String referenceCode = UUID.randomUUID().toString();
         WalletTransactionEntity debitTransaction = buildWalletTransferTransaction(
                 senderWallet,
@@ -179,7 +183,8 @@ public class WalletBankServiceImpl implements WalletBankService {
                 Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_OUT,
                 amount,
                 idempotencyKey,
-                referenceCode
+                referenceCode,
+                Constant.STATUS_PENDING
         );
         WalletTransactionEntity creditTransaction = buildWalletTransferTransaction(
                 recipientWallet,
@@ -188,11 +193,51 @@ public class WalletBankServiceImpl implements WalletBankService {
                 Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_IN,
                 amount,
                 idempotencyKey + Constant.WALLET_TRANSFER_CREDIT_IDEMPOTENCY_SUFFIX,
-                referenceCode
+                referenceCode,
+                Constant.STATUS_PENDING
         );
 
-        walletTransactionRepository.save(creditTransaction);
-        return toWalletTransactionResponse(walletTransactionMapper.toDto(walletTransactionRepository.save(debitTransaction)));
+        WalletTransactionEntity savedDebitTransaction = walletTransactionRepository.save(debitTransaction);
+        WalletTransactionEntity savedCreditTransaction = walletTransactionRepository.save(creditTransaction);
+        WalletProcessingResult processingResult = processTransaction(
+                userId,
+                Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_OUT,
+                amount,
+                idempotencyKey,
+                referenceCode
+        );
+        if (Constant.STATUS_PENDING.equals(processingResult.getStatus())) {
+            return toWalletTransactionResponse(walletTransactionMapper.toDto(savedDebitTransaction));
+        }
+        if (!Constant.STATUS_SUCCESS.equals(processingResult.getStatus())) {
+            savedDebitTransaction.setStatus(Constant.STATUS_FAILED);
+            savedCreditTransaction.setStatus(Constant.STATUS_FAILED);
+            walletTransactionRepository.save(savedCreditTransaction);
+            return toWalletTransactionResponse(walletTransactionMapper.toDto(walletTransactionRepository.save(savedDebitTransaction)));
+        }
+
+        senderWallet.setAvailableBalance(senderWallet.getAvailableBalance().subtract(amount));
+        recipientWallet.setAvailableBalance(recipientWallet.getAvailableBalance().add(amount));
+        savedDebitTransaction.setStatus(Constant.STATUS_SUCCESS);
+        savedCreditTransaction.setStatus(Constant.STATUS_SUCCESS);
+        createLedgerEntry(
+                savedDebitTransaction,
+                senderWallet,
+                Constant.LEDGER_ENTRY_TYPE_DEBIT,
+                amount,
+                senderWallet.getAvailableBalance(),
+                buildWalletTransferDescription(Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_OUT, recipientWallet.getUser())
+        );
+        createLedgerEntry(
+                savedCreditTransaction,
+                recipientWallet,
+                Constant.LEDGER_ENTRY_TYPE_CREDIT,
+                amount,
+                recipientWallet.getAvailableBalance(),
+                buildWalletTransferDescription(Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_IN, senderWallet.getUser())
+        );
+        walletTransactionRepository.save(savedCreditTransaction);
+        return toWalletTransactionResponse(walletTransactionMapper.toDto(walletTransactionRepository.save(savedDebitTransaction)));
     }
 
     @Override
@@ -298,6 +343,39 @@ public class WalletBankServiceImpl implements WalletBankService {
         ensureActiveBank(bank);
 
         BigDecimal amount = request.getAmount();
+        String referenceCode = UUID.randomUUID().toString();
+        WalletTransactionDTO transactionDto = WalletTransactionDTO.builder()
+                .walletId(wallet.getId())
+                .userId(userId)
+                .linkedBankAccountId(bankAccount.getId())
+                .type(transactionType)
+                .amount(amount)
+                .status(Constant.STATUS_PENDING)
+                .idempotencyKey(idempotencyKey)
+                .referenceCode(referenceCode)
+                .description(buildBankTransferDescription(transactionType, bankAccount))
+                .build();
+        WalletTransactionEntity transaction = walletTransactionMapper.toEntity(transactionDto);
+        transaction.setWallet(wallet);
+        transaction.setUser(userRepository.getReferenceById(userId));
+        transaction.setLinkedBankAccount(bankAccount);
+        WalletTransactionEntity savedTransaction = walletTransactionRepository.save(transaction);
+
+        WalletProcessingResult processingResult = processTransaction(
+                userId,
+                transactionType,
+                amount,
+                idempotencyKey,
+                referenceCode
+        );
+        if (Constant.STATUS_PENDING.equals(processingResult.getStatus())) {
+            return toWalletTransactionResponse(walletTransactionMapper.toDto(savedTransaction));
+        }
+        if (!Constant.STATUS_SUCCESS.equals(processingResult.getStatus())) {
+            savedTransaction.setStatus(Constant.STATUS_FAILED);
+            return toWalletTransactionResponse(walletTransactionMapper.toDto(walletTransactionRepository.save(savedTransaction)));
+        }
+
         if (Constant.WALLET_TRANSACTION_TYPE_BANK_TO_WALLET.equals(transactionType)) {
             ensureEnoughBalance(
                     bank.getBalance(),
@@ -307,6 +385,14 @@ public class WalletBankServiceImpl implements WalletBankService {
             );
             bank.setBalance(bank.getBalance().subtract(amount));
             wallet.setAvailableBalance(wallet.getAvailableBalance().add(amount));
+            createLedgerEntry(
+                    savedTransaction,
+                    wallet,
+                    Constant.LEDGER_ENTRY_TYPE_CREDIT,
+                    amount,
+                    wallet.getAvailableBalance(),
+                    buildBankTransferDescription(transactionType, bankAccount)
+            );
         } else {
             ensureEnoughBalance(
                     wallet.getAvailableBalance(),
@@ -316,24 +402,18 @@ public class WalletBankServiceImpl implements WalletBankService {
             );
             wallet.setAvailableBalance(wallet.getAvailableBalance().subtract(amount));
             bank.setBalance(bank.getBalance().add(amount));
+            createLedgerEntry(
+                    savedTransaction,
+                    wallet,
+                    Constant.LEDGER_ENTRY_TYPE_DEBIT,
+                    amount,
+                    wallet.getAvailableBalance(),
+                    buildBankTransferDescription(transactionType, bankAccount)
+            );
         }
 
-        WalletTransactionDTO transactionDto = WalletTransactionDTO.builder()
-                .walletId(wallet.getId())
-                .userId(userId)
-                .linkedBankAccountId(bankAccount.getId())
-                .type(transactionType)
-                .amount(amount)
-                .status(Constant.STATUS_SUCCESS)
-                .idempotencyKey(idempotencyKey)
-                .referenceCode(UUID.randomUUID().toString())
-                .description(buildBankTransferDescription(transactionType, bankAccount))
-                .build();
-        WalletTransactionEntity transaction = walletTransactionMapper.toEntity(transactionDto);
-        transaction.setWallet(wallet);
-        transaction.setUser(userRepository.getReferenceById(userId));
-        transaction.setLinkedBankAccount(bankAccount);
-        return toWalletTransactionResponse(walletTransactionMapper.toDto(walletTransactionRepository.save(transaction)));
+        savedTransaction.setStatus(Constant.STATUS_SUCCESS);
+        return toWalletTransactionResponse(walletTransactionMapper.toDto(walletTransactionRepository.save(savedTransaction)));
     }
 
     private WalletEntity findWallet(UUID userId) {
@@ -419,7 +499,8 @@ public class WalletBankServiceImpl implements WalletBankService {
             String type,
             BigDecimal amount,
             String idempotencyKey,
-            String referenceCode
+            String referenceCode,
+            String status
     ) {
         WalletTransactionDTO transactionDto = WalletTransactionDTO.builder()
                 .walletId(wallet.getId())
@@ -427,7 +508,7 @@ public class WalletBankServiceImpl implements WalletBankService {
                 .counterpartyWalletId(counterpartyWallet.getId())
                 .type(type)
                 .amount(amount)
-                .status(Constant.STATUS_SUCCESS)
+                .status(status)
                 .idempotencyKey(idempotencyKey)
                 .referenceCode(referenceCode)
                 .description(buildWalletTransferDescription(type, counterpartyWallet.getUser()))
@@ -437,6 +518,51 @@ public class WalletBankServiceImpl implements WalletBankService {
         transaction.setUser(userRepository.getReferenceById(userId));
         transaction.setCounterpartyWallet(counterpartyWallet);
         return transaction;
+    }
+
+    private WalletProcessingResult processTransaction(
+            UUID userId,
+            String transactionType,
+            BigDecimal amount,
+            String idempotencyKey,
+            String referenceCode
+    ) {
+        WalletProcessingResult result = walletTransactionProcessor.process(
+                WalletProcessingRequest.builder()
+                        .userId(userId)
+                        .transactionType(transactionType)
+                        .amount(amount)
+                        .idempotencyKey(idempotencyKey)
+                        .referenceCode(referenceCode)
+                        .build()
+        );
+        if (result == null || result.getStatus() == null) {
+            return WalletProcessingResult.builder()
+                    .status(Constant.STATUS_FAILED)
+                    .message("External processor returned no result.")
+                    .build();
+        }
+        return result;
+    }
+
+    private void createLedgerEntry(
+            WalletTransactionEntity transaction,
+            WalletEntity wallet,
+            String type,
+            BigDecimal amount,
+            BigDecimal balanceAfter,
+            String description
+    ) {
+        walletLedgerEntryRepository.save(
+                WalletLedgerEntryEntity.builder()
+                        .transaction(transaction)
+                        .wallet(wallet)
+                        .type(type)
+                        .amount(amount)
+                        .balanceAfter(balanceAfter)
+                        .description(description)
+                        .build()
+        );
     }
 
     private WalletResponse toWalletResponse(com.university.fintech.domain.dto.WalletDTO wallet) {

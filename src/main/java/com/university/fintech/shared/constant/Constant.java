@@ -12,6 +12,7 @@ public class Constant {
     public static final String STATUS_ACTIVE = "ACTIVE";
     public static final String STATUS_PENDING_EMAIL_VERIFICATION = "PENDING_EMAIL_VERIFICATION";
     public static final String STATUS_LOCKED = "LOCKED";
+    public static final String STATUS_PENDING = "PENDING";
     public static final String STATUS_SUCCESS = "SUCCESS";
     public static final String STATUS_FAILED = "FAILED";
 
@@ -141,4 +142,8 @@ public class Constant {
     public static final String WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_OUT = "WALLET_TRANSFER_OUT";
     public static final String WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_IN = "WALLET_TRANSFER_IN";
     public static final String WALLET_TRANSFER_CREDIT_IDEMPOTENCY_SUFFIX = ":CREDIT";
+    public static final String LEDGER_ENTRY_TYPE_CREDIT = "CREDIT";
+    public static final String LEDGER_ENTRY_TYPE_DEBIT = "DEBIT";
+    public static final String WALLET_PROCESSING_TEST_PENDING_TOKEN = "PENDING";
+    public static final String WALLET_PROCESSING_TEST_FAILED_TOKEN = "FAILED";
 }
