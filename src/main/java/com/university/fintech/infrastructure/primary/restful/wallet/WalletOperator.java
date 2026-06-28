@@ -44,6 +44,11 @@ public class WalletOperator {
         return walletBankService.getBanks();
     }
 
+    @GetMapping("/topup-methods")
+    public List<String> getTopUpMethods() {
+        return walletBankService.getTopUpMethods();
+    }
+
     @PostMapping("/bank-accounts")
     public LinkedBankAccountResponse linkBankAccount(
             Authentication authentication,

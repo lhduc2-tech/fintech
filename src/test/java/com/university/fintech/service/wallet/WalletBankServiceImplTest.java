@@ -29,11 +29,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -90,12 +92,22 @@ class WalletBankServiceImplTest {
                 .status(Constant.STATUS_ACTIVE)
                 .build();
 
-        when(walletTransactionMapper.toEntity(any(WalletTransactionDTO.class)))
+        lenient().when(walletTransactionMapper.toEntity(any(WalletTransactionDTO.class)))
                 .thenAnswer(invocation -> transactionFromDto(invocation.getArgument(0)));
-        when(walletTransactionMapper.toDto(any(WalletTransactionEntity.class)))
+        lenient().when(walletTransactionMapper.toDto(any(WalletTransactionEntity.class)))
                 .thenAnswer(invocation -> dtoFromTransaction(invocation.getArgument(0)));
-        when(walletTransactionRepository.save(any(WalletTransactionEntity.class)))
+        lenient().when(walletTransactionRepository.save(any(WalletTransactionEntity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
+    }
+
+    @Test
+    void getTopUpMethodsReturnsActiveDistinctBankCodes() {
+        when(bankRepository.findDistinctBankCodesByStatusOrderByBankCode(Constant.STATUS_ACTIVE))
+                .thenReturn(List.of("MB", "TCB", "VCB"));
+
+        List<String> methods = walletBankService.getTopUpMethods();
+
+        assertThat(methods).containsExactly("MB", "TCB", "VCB");
     }
 
     @Test

@@ -23,6 +23,8 @@ public interface WalletBankService {
 
     List<BankResponse> getBanks();
 
+    List<String> getTopUpMethods();
+
     LinkedBankAccountResponse linkBankAccount(UUID userId, LinkBankAccountRequest request);
 
     List<LinkedBankAccountResponse> getLinkedBankAccounts(UUID userId);

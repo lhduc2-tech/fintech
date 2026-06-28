@@ -82,6 +82,12 @@ public class WalletBankServiceImpl implements WalletBankService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<String> getTopUpMethods() {
+        return bankRepository.findDistinctBankCodesByStatusOrderByBankCode(Constant.STATUS_ACTIVE);
+    }
+
+    @Override
     @Transactional
     public LinkedBankAccountResponse linkBankAccount(UUID userId, LinkBankAccountRequest request) {
         WalletEntity wallet = findWallet(userId);
