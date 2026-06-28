@@ -9,6 +9,7 @@ import com.university.fintech.domain.entity.WalletTransactionEntity;
 import com.university.fintech.domain.mapper.LinkedBankAccountMapper;
 import com.university.fintech.domain.mapper.WalletMapper;
 import com.university.fintech.domain.mapper.WalletTransactionMapper;
+import com.university.fintech.domain.port.primary.WalletNotificationMailService;
 import com.university.fintech.domain.port.secondary.WalletTransactionProcessor;
 import com.university.fintech.domain.port.secondary.model.WalletProcessingResult;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletBankTransferRequest;
@@ -34,7 +35,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -65,6 +68,8 @@ class WalletBankServiceImplTest {
     private WalletLedgerEntryRepository walletLedgerEntryRepository;
     @Mock
     private WalletTransactionProcessor walletTransactionProcessor;
+    @Mock
+    private WalletNotificationMailService walletNotificationMailService;
     @Mock
     private WalletMapper walletMapper;
     @Mock
@@ -120,6 +125,17 @@ class WalletBankServiceImplTest {
         assertThat(wallet.getAvailableBalance()).isEqualByComparingTo("125.00");
         assertThat(bank.getBalance()).isEqualByComparingTo("975.00");
         verify(walletLedgerEntryRepository).save(any());
+        verify(walletNotificationMailService).sendTransactionNotification(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any()
+        );
     }
 
     @Test
@@ -132,6 +148,17 @@ class WalletBankServiceImplTest {
         assertThat(wallet.getAvailableBalance()).isEqualByComparingTo("100.00");
         assertThat(bank.getBalance()).isEqualByComparingTo("1000.00");
         verify(walletLedgerEntryRepository, never()).save(any());
+        verify(walletNotificationMailService).sendTransactionNotification(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any()
+        );
     }
 
     @Test
@@ -144,6 +171,17 @@ class WalletBankServiceImplTest {
         assertThat(wallet.getAvailableBalance()).isEqualByComparingTo("100.00");
         assertThat(bank.getBalance()).isEqualByComparingTo("1000.00");
         verify(walletLedgerEntryRepository, never()).save(any());
+        verify(walletNotificationMailService).sendTransactionNotification(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any()
+        );
     }
 
     @Test
@@ -183,6 +221,24 @@ class WalletBankServiceImplTest {
     }
 
     @Test
+    void withdrawToBankFailureSendsErrorNotification() {
+        wallet.setAvailableBalance(new BigDecimal("10.00"));
+        arrangeBankTransfer(Constant.STATUS_SUCCESS);
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> walletBankService.withdrawToBank(USER_ID, bankRequest("withdraw-error")))
+                .hasMessage(Constant.MESSAGE_INSUFFICIENT_WALLET_BALANCE);
+
+        verify(walletNotificationMailService).sendTransactionErrorNotification(
+                any(),
+                any(),
+                any(),
+                any(),
+                any()
+        );
+    }
+
+    @Test
     void transferToWalletCreatesPendingThenSuccessAndCreatesTwoLedgerEntries() {
         UserEntity recipient = user(RECIPIENT_ID, "0900000002");
         WalletEntity recipientWallet = wallet(RECIPIENT_WALLET_ID, recipient, "10.00");
@@ -194,6 +250,17 @@ class WalletBankServiceImplTest {
         assertThat(wallet.getAvailableBalance()).isEqualByComparingTo("75.00");
         assertThat(recipientWallet.getAvailableBalance()).isEqualByComparingTo("35.00");
         verify(walletLedgerEntryRepository, times(2)).save(any());
+        verify(walletNotificationMailService).sendTransactionNotification(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                eq(recipient.getFullName()),
+                eq(recipient.getPhoneNumber())
+        );
     }
 
     @Test
@@ -300,6 +367,7 @@ class WalletBankServiceImplTest {
     private UserEntity user(UUID id, String phoneNumber) {
         return UserEntity.builder()
                 .id(id)
+                .email(phoneNumber + "@wallet-test.local")
                 .fullName("Test User")
                 .phoneNumber(phoneNumber)
                 .status(Constant.STATUS_ACTIVE)

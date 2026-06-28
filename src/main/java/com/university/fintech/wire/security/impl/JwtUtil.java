@@ -28,13 +28,13 @@ public class JwtUtil implements JwtProvider {
     public JwtUtil(
             // Collect secret key from configuration file to sign JWT
             @Value("${application.jwt.secret:}") String jwtSecret,
-            @Value("${application.jwt.expiration-ms:}") long jwtExpirationMs
+            @Value("${application.jwt.expiration-ms}") long jwtExpirationMs
     ) {
         // Convert secret to byte[]
         byte[] secretBytes = jwtSecret == null ? new byte[0] : jwtSecret.getBytes(StandardCharsets.UTF_8);
         // SHA256 standard needs more than 32 bytes for the secret key
         if (secretBytes.length < MIN_SECRET_BYTES) {
-            throw new IllegalStateException("app.jwt.secret must be at least 32 bytes for HS256");
+            throw new IllegalStateException("application.jwt.secret must be at least 32 bytes for HS256");
         }
         // Create key to sign & verify JWT
         this.key = Keys.hmacShaKeyFor(secretBytes);
