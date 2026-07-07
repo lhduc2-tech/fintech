@@ -6,6 +6,8 @@ import com.university.fintech.infrastructure.primary.restful.request.auth.Regist
 import com.university.fintech.infrastructure.primary.restful.request.auth.ResetPasswordRequest;
 import com.university.fintech.infrastructure.primary.restful.request.auth.VerifyOtpCodeRequest;
 import com.university.fintech.infrastructure.primary.restful.response.auth.AuthResponse;
+import com.university.fintech.infrastructure.primary.restful.response.auth.UserProfileResponse;
+import java.util.UUID;
 
 public interface AuthService {
 
@@ -20,4 +22,6 @@ public interface AuthService {
     void resetPassword(ResetPasswordRequest request);
 
     void logout(String token);
+
+    UserProfileResponse getUserProfile(UUID userId);
 }

@@ -15,6 +15,8 @@ import com.university.fintech.infrastructure.primary.restful.request.auth.Regist
 import com.university.fintech.infrastructure.primary.restful.request.auth.ResetPasswordRequest;
 import com.university.fintech.infrastructure.primary.restful.request.auth.VerifyOtpCodeRequest;
 import com.university.fintech.infrastructure.primary.restful.response.auth.AuthResponse;
+import com.university.fintech.infrastructure.primary.restful.response.auth.UserProfileResponse;
+import java.util.UUID;
 import com.university.fintech.infrastructure.secondary.jpa.repository.RoleRepository;
 import com.university.fintech.infrastructure.secondary.jpa.repository.UserRepository;
 import com.university.fintech.infrastructure.secondary.jpa.repository.WalletRepository;
@@ -303,5 +305,21 @@ public class AuthServiceImpl implements AuthService {
         String withoutDiacritics = Normalizer.normalize(withoutSpecialVietnameseCharacters, Normalizer.Form.NFD)
                 .replaceAll(Constant.DIACRITIC_MARK_REGEX, Constant.EMPTY);
         return withoutDiacritics.toUpperCase(Locale.ROOT);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserProfileResponse getUserProfile(UUID userId) {
+        UserEntity userEntity = userRepository.findById(userId)
+                .orElseThrow(() -> new AuthException("User not found", "USER_NOT_FOUND"));
+        return UserProfileResponse.builder()
+                .fullName(userEntity.getFullName())
+                .identityNumber(userEntity.getIdentityNumber())
+                .dob(userEntity.getDob())
+                .hometown(userEntity.getHometown())
+                .email(userEntity.getEmail())
+                .phoneNumber(userEntity.getPhoneNumber())
+                .tier(userEntity.getTier())
+                .build();
     }
 }

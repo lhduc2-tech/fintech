@@ -12,10 +12,15 @@ import com.university.fintech.shared.constant.Constant;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.university.fintech.infrastructure.primary.restful.response.auth.UserProfileResponse;
+import org.springframework.security.core.Authentication;
+import java.util.Map;
+import java.util.UUID;
 
 public class AuthOperator {
 
@@ -66,6 +71,17 @@ public class AuthOperator {
         public MessageResponse logout(@RequestHeader("Authorization") String authorization) {
             authService.logout(extractBearerToken(authorization));
             return new MessageResponse("Logged out successfully.");
+        }
+
+        @GetMapping("/me")
+        public UserProfileResponse getUserProfile(Authentication authentication) {
+            return authService.getUserProfile(extractUserId(authentication));
+        }
+
+        @SuppressWarnings("unchecked")
+        private UUID extractUserId(Authentication authentication) {
+            Map<String, String> principal = (Map<String, String>) authentication.getPrincipal();
+            return UUID.fromString(principal.get("userId"));
         }
 
         private String extractBearerToken(String authorization) {
