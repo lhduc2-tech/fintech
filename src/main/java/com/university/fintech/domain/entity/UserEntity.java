@@ -6,6 +6,7 @@ import com.university.fintech.shared.constant.Constant;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -38,6 +39,15 @@ public class UserEntity extends BaseAuditing {
 
     @Column(name = "phone_number", nullable = false, unique = true)
     private String phoneNumber;
+
+    @Column(name = "identity_number")
+    private String identityNumber;
+
+    private LocalDate dob;
+
+    private String hometown;
+
+    private Integer tier;
 
     @Builder.Default
     @Column(name = "failed_login_attempts")

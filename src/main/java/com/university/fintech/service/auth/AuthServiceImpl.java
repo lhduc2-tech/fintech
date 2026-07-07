@@ -80,6 +80,12 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new AuthException(Constant.MESSAGE_DEFAULT_ROLE_NOT_FOUND, Constant.ERROR_DEFAULT_ROLE_NOT_FOUND));
         RoleDTO userRoleDto = roleMapper.toDto(userRole);
 
+        int calculatedTier = 0;
+        if (request.getDob() != null) {
+            int age = java.time.Period.between(request.getDob(), java.time.LocalDate.now()).getYears();
+            calculatedTier = age >= 18 ? 1 : 0;
+        }
+
         UserDTO userDto = UserDTO.builder()
                 .email(email)
                 .passwordHash(password.encode(request.getPassword()))
@@ -88,6 +94,10 @@ public class AuthServiceImpl implements AuthService {
                 .phoneNumber(phoneNumber)
                 .failedLoginAttempts(0)
                 .roleCodes(new HashSet<>(Set.of(userRoleDto.getCode())))
+                .identityNumber(request.getIdentityNumber())
+                .dob(request.getDob())
+                .hometown(request.getHometown())
+                .tier(calculatedTier)
                 .build();
         UserEntity user = userMapper.toEntity(userDto);
         user.setRoles(new HashSet<>(Set.of(userRole)));
@@ -198,6 +208,10 @@ public class AuthServiceImpl implements AuthService {
                 .roles(user.getRoleCodes())
                 .accessToken(accessToken)
                 .tokenType(accessToken == null ? null : Constant.TOKEN_TYPE_BEARER)
+                .identityNumber(user.getIdentityNumber())
+                .dob(user.getDob())
+                .hometown(user.getHometown())
+                .tier(user.getTier())
                 .build();
     }
 

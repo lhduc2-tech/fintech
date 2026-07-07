@@ -2,6 +2,7 @@ package com.university.fintech.domain.dto;
 
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -27,6 +28,14 @@ public class UserDTO {
     private String fullName;
 
     private String phoneNumber;
+
+    private String identityNumber;
+
+    private LocalDate dob;
+
+    private String hometown;
+
+    private Integer tier;
 
     private Integer failedLoginAttempts;
 

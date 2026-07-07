@@ -8,6 +8,8 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDate;
+
 @Getter
 @Setter
 public class RegisterRequest {
@@ -33,4 +35,12 @@ public class RegisterRequest {
     @Pattern(regexp = Constant.PHONE_NUMBER_NUMERIC_PATTERN, message = Constant.MESSAGE_PHONE_NUMBER_NUMERIC_ONLY)
     @Pattern(regexp = Constant.PHONE_NUMBER_PATTERN, message = Constant.MESSAGE_PHONE_NUMBER_EXACTLY_10_DIGITS)
     private String phoneNumber;
+
+    @Size(max = 50)
+    private String identityNumber;
+
+    private LocalDate dob;
+
+    @Size(max = 255)
+    private String hometown;
 }
