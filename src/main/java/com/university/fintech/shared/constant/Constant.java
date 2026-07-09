@@ -110,6 +110,7 @@ public class Constant {
     public static final String ERROR_WALLET_NOT_ACTIVE = "WALLET_NOT_ACTIVE";
     public static final String ERROR_BANK_NOT_ACTIVE = "BANK_NOT_ACTIVE";
     public static final String ERROR_BANK_ACCOUNT_NOT_ACTIVE = "BANK_ACCOUNT_NOT_ACTIVE";
+    public static final String ERROR_BANK_ACCOUNT_HAS_PENDING_TRANSACTION = "BANK_ACCOUNT_HAS_PENDING_TRANSACTION";
     public static final String ERROR_WALLET_TRANSACTION_AMOUNT_LIMIT_EXCEEDED = "WALLET_TRANSACTION_AMOUNT_LIMIT_EXCEEDED";
 
     public static final String MESSAGE_EMAIL_ALREADY_EXISTS = "Email already exists.";
@@ -141,6 +142,7 @@ public class Constant {
     public static final String MESSAGE_WALLET_NOT_ACTIVE = "Wallet is not active.";
     public static final String MESSAGE_BANK_NOT_ACTIVE = "Bank is not active.";
     public static final String MESSAGE_BANK_ACCOUNT_NOT_ACTIVE = "Linked bank account is not active.";
+    public static final String MESSAGE_BANK_ACCOUNT_HAS_PENDING_TRANSACTION = "Cannot unlink bank account with pending transactions.";
     public static final String MESSAGE_WALLET_TRANSACTION_AMOUNT_POSITIVE = "Amount must be greater than 0.";
     public static final String MESSAGE_WALLET_TRANSACTION_AMOUNT_INTEGER = "Amount must be an integer.";
     public static final String MESSAGE_WALLET_TRANSACTION_AMOUNT_MAX_PER_TRANSACTION = "Amount must not exceed 50,000,000 per transaction.";

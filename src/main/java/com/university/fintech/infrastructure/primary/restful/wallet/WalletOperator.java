@@ -16,6 +16,8 @@ import com.university.fintech.infrastructure.primary.restful.response.wallet.Wal
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -60,6 +62,15 @@ public class WalletOperator {
     @GetMapping("/bank-accounts")
     public List<LinkedBankAccountResponse> getLinkedBankAccounts(Authentication authentication) {
         return walletBankService.getLinkedBankAccounts(extractUserId(authentication));
+    }
+
+    @DeleteMapping("/bank-accounts/{id}")
+    public ResponseEntity<Void> unlinkBankAccount(
+            Authentication authentication,
+            @PathVariable UUID id
+    ) {
+        walletBankService.unlinkBankAccount(extractUserId(authentication), id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/bank-topup")

@@ -131,6 +131,23 @@ public class WalletBankServiceImpl implements WalletBankService {
 
     @Override
     @Transactional
+    public void unlinkBankAccount(UUID userId, UUID bankAccountId) {
+        LinkedBankAccountEntity bankAccount = linkedBankAccountRepository.findByIdAndUserId(bankAccountId, userId)
+                .orElseThrow(() -> new AuthException(Constant.MESSAGE_BANK_ACCOUNT_NOT_FOUND, Constant.ERROR_BANK_ACCOUNT_NOT_FOUND));
+        boolean hasPendingTransaction = walletTransactionRepository.existsByLinkedBankAccountIdAndStatus(
+                bankAccount.getId(), Constant.STATUS_PENDING
+        );
+        if (hasPendingTransaction) {
+            throw new AuthException(
+                    Constant.MESSAGE_BANK_ACCOUNT_HAS_PENDING_TRANSACTION,
+                    Constant.ERROR_BANK_ACCOUNT_HAS_PENDING_TRANSACTION
+            );
+        }
+        linkedBankAccountRepository.delete(bankAccount);
+    }
+
+    @Override
+    @Transactional
     public WalletTransactionResponse topUpFromBank(UUID userId, WalletBankTransferRequest request) {
         try {
             return executeTransfer(

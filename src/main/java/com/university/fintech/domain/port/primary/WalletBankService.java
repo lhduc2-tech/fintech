@@ -29,6 +29,8 @@ public interface WalletBankService {
 
     List<LinkedBankAccountResponse> getLinkedBankAccounts(UUID userId);
 
+    void unlinkBankAccount(UUID userId, UUID bankAccountId);
+
     WalletTransactionResponse topUpFromBank(UUID userId, WalletBankTransferRequest request);
 
     WalletTransactionResponse withdrawToBank(UUID userId, WalletBankTransferRequest request);

@@ -18,6 +18,8 @@ public interface WalletTransactionRepository extends BaseJPARepository<WalletTra
 
     boolean existsByIdempotencyKey(String idempotencyKey);
 
+    boolean existsByLinkedBankAccountIdAndStatus(UUID linkedBankAccountId, String status);
+
     Optional<WalletTransactionEntity> findByIdempotencyKey(String idempotencyKey);
 
     Page<WalletTransactionEntity> findAllByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
