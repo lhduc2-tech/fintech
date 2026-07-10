@@ -28,6 +28,9 @@ public interface LinkedBankAccountRepository extends BaseJPARepository<LinkedBan
     @Query("select count(bankAccount) > 0 from LinkedBankAccountEntity bankAccount where bankAccount.bank.id = :bankId and bankAccount.status = :status")
     boolean existsByBankIdAndStatus(@Param("bankId") UUID bankId, @Param("status") String status);
 
+    @Query("select bankAccount from LinkedBankAccountEntity bankAccount where bankAccount.bank.id = :bankId and bankAccount.wallet.user.id = :userId")
+    Optional<LinkedBankAccountEntity> findByBankIdAndWalletUserId(@Param("bankId") UUID bankId, @Param("userId") UUID userId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select bankAccount from LinkedBankAccountEntity bankAccount where bankAccount.id = :id and bankAccount.wallet.user.id = :userId")
     Optional<LinkedBankAccountEntity> findByIdAndUserIdForUpdate(@Param("id") UUID id, @Param("userId") UUID userId);

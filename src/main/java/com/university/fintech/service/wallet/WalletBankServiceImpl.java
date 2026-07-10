@@ -54,6 +54,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -107,6 +108,15 @@ public class WalletBankServiceImpl implements WalletBankService {
                     Constant.MESSAGE_BANK_ACCOUNT_ALREADY_LINKED,
                     Constant.ERROR_BANK_ACCOUNT_ALREADY_LINKED
             );
+        }
+
+        // Nếu đã từng link rồi unlink → restore record cũ, tránh vi phạm unique constraint DB
+        Optional<LinkedBankAccountEntity> existing = linkedBankAccountRepository
+                .findByBankIdAndWalletUserId(bank.getId(), userId);
+        if (existing.isPresent()) {
+            LinkedBankAccountEntity bankAccount = existing.get();
+            bankAccount.setStatus(Constant.STATUS_ACTIVE);
+            return toLinkedBankAccountResponse(linkedBankAccountMapper.toDto(linkedBankAccountRepository.save(bankAccount)));
         }
 
         LinkedBankAccountDTO bankAccountDto = LinkedBankAccountDTO.builder()
