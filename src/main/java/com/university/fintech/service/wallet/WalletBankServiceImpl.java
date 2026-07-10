@@ -102,7 +102,7 @@ public class WalletBankServiceImpl implements WalletBankService {
         BankEntity bank = bankRepository.findByBankCodeAndAccountNumber(bankCode, accountNumber)
                 .orElseThrow(() -> new AuthException(Constant.MESSAGE_BANK_NOT_FOUND, Constant.ERROR_BANK_NOT_FOUND));
 
-        if (linkedBankAccountRepository.existsByBankId(bank.getId())) {
+        if (linkedBankAccountRepository.existsByBankIdAndStatus(bank.getId(), Constant.STATUS_ACTIVE)) {
             throw new AuthException(
                     Constant.MESSAGE_BANK_ACCOUNT_ALREADY_LINKED,
                     Constant.ERROR_BANK_ACCOUNT_ALREADY_LINKED
@@ -123,7 +123,7 @@ public class WalletBankServiceImpl implements WalletBankService {
     @Override
     @Transactional(readOnly = true)
     public List<LinkedBankAccountResponse> getLinkedBankAccounts(UUID userId) {
-        return linkedBankAccountRepository.findAllByUserIdOrderByCreatedAtDesc(userId).stream()
+        return linkedBankAccountRepository.findAllByUserIdAndStatusOrderByCreatedAtDesc(userId, Constant.STATUS_ACTIVE).stream()
                 .map(linkedBankAccountMapper::toDto)
                 .map(this::toLinkedBankAccountResponse)
                 .toList();
@@ -134,6 +134,9 @@ public class WalletBankServiceImpl implements WalletBankService {
     public void unlinkBankAccount(UUID userId, UUID bankAccountId) {
         LinkedBankAccountEntity bankAccount = linkedBankAccountRepository.findByIdAndUserId(bankAccountId, userId)
                 .orElseThrow(() -> new AuthException(Constant.MESSAGE_BANK_ACCOUNT_NOT_FOUND, Constant.ERROR_BANK_ACCOUNT_NOT_FOUND));
+        if (!Constant.STATUS_ACTIVE.equalsIgnoreCase(bankAccount.getStatus())) {
+            throw new AuthException(Constant.MESSAGE_BANK_ACCOUNT_NOT_FOUND, Constant.ERROR_BANK_ACCOUNT_NOT_FOUND);
+        }
         boolean hasPendingTransaction = walletTransactionRepository.existsByLinkedBankAccountIdAndStatus(
                 bankAccount.getId(), Constant.STATUS_PENDING
         );
@@ -143,7 +146,8 @@ public class WalletBankServiceImpl implements WalletBankService {
                     Constant.ERROR_BANK_ACCOUNT_HAS_PENDING_TRANSACTION
             );
         }
-        linkedBankAccountRepository.delete(bankAccount);
+        bankAccount.setStatus(Constant.STATUS_UNLINKED);
+        linkedBankAccountRepository.save(bankAccount);
     }
 
     @Override

@@ -10,6 +10,7 @@ public class Constant {
     public static final int DEFAULT_SIZE = 10;
 
     public static final String STATUS_ACTIVE = "ACTIVE";
+    public static final String STATUS_UNLINKED = "UNLINKED";
     public static final String STATUS_PENDING_EMAIL_VERIFICATION = "PENDING_EMAIL_VERIFICATION";
     public static final String STATUS_LOCKED = "LOCKED";
     public static final String STATUS_PENDING = "PENDING";
