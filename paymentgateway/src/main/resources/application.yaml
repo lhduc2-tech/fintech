@@ -1,19 +1,8 @@
 logging:
   level:
-    org:
-      springframework:
-        web:
-          servlet:
-            mvc:
-              method:
-                annotation:
-                  RequestMappingHandlerMapping: DEBUG
-    zaxxer:
-      hikari:
-        HikariConfig: DEBUG
     com:
       university:
-        fintech: DEBUG
+        paymentgateway: DEBUG
 
 spring:
   config:
@@ -25,47 +14,34 @@ spring:
   threads:
     virtual:
       enabled: true
-  data:
-    jpa:
-      repositories:
-        bootstrap-mode: deferred
-    redis:
-      url: ${REDIS_REST_URL:}
-      token: ${REDIS_REST_TOKEN:}
 
-  mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${SPRING_MAIL_USERNAME:}
-    password: ${SPRING_MAIL_PASSWORD:}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-            required: true
-          ssl:
-            trust: smtp.gmail.com
-            protocols: TLSv1.2
+      security.protocol: SASL_SSL
+      sasl.mechanism: SCRAM-SHA-256
+      sasl.jaas.config: "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"${KAFKA_SASL_USERNAME:}\" password=\"${KAFKA_SASL_PASSWORD:}\";"
+      ssl.truststore.type: PEM
+      ssl.truststore.location: ${KAFKA_CA_CERT_PATH:kafka-ca.pem}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      retries: 3
+    consumer:
+      group-id: paymentgateway-consumer-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      enable-auto-commit: false
 
-  s3:
-    endpoint: ${S3_ENDPOINT:}
-    region: ${S3_REGION:}
-    access-key-id: ${S3_KEY_ID:}
-    secret-access-key: ${S3_ACCESS_KEY:}
-    bucket-name: ${S3_BUCKET_NAME:}
   datasource:
     driver-class-name: org.postgresql.Driver
     hikari:
       auto-commit: false
       pool-name: Hikari
-      maximum-pool-size: 40
-      data-source-properties:
-        oracle:
-          jdbc:
-            defaultConnectionValidation: LOCAL
-      minimum-idle: 10
+      maximum-pool-size: 20
+      minimum-idle: 5
     type: com.zaxxer.hikari.HikariDataSource
     url: ${DB_URL}
     username: ${DB_USERNAME:}
@@ -88,37 +64,16 @@ spring:
           time_zone: UTC
         order_inserts: true
         order_updates: true
-        query:
-          fail_on_pagination_over_collection_fetch: true
-          in_clause_parameter_padding: true
-        cache:
-          use_second_level_cache: false
-          use_query_cache: false
         show_sql: true
         format_sql: true
+
 application:
-  version: api/v1
-  path:
-    base:
-      private: /private/${application.version}
-      public: /public/${application.version}
-  jwt:
-    secret: ${JWT_SECRET:}
-    expiration-ms: ${JWT_EXPIRATION_MS:}
-  auth:
-    email-verification-ttl-seconds: ${EMAIL_VERIFICATION_TTL_SECONDS:86400}
-    email-verification-send-max-attempts: ${EMAIL_VERIFICATION_SEND_MAX_ATTEMPTS:3}
-    email-verification-send-window-seconds: ${EMAIL_VERIFICATION_SEND_WINDOW_SECONDS:600}
-    email-verification-send-cooldown-seconds: ${EMAIL_VERIFICATION_SEND_COOLDOWN_SECONDS:60}
-    account-unlock-code-ttl-seconds: ${ACCOUNT_UNLOCK_CODE_TTL_SECONDS:600}
-    password-reset-code-ttl-seconds: ${PASSWORD_RESET_CODE_TTL_SECONDS:600}
+  kafka:
+    payment-request-topic: payment.request
+    payment-result-topic: payment.result
+    payload-secret-key: ${KAFKA_PAYLOAD_SECRET_KEY:}
 
 server:
   port: 8084
   servlet:
     context-path: ${SERVER_CTX_PATH:}
-
-proxy:
-  enable: false
-  host: localhost
-  port: 8084

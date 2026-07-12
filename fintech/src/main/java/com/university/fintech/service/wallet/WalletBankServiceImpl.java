@@ -230,6 +230,10 @@ public class WalletBankServiceImpl implements WalletBankService {
             );
             ensureWalletTransactionLimit(userId, amount);
 
+            // Hold sender balance ngay để tránh double-spend trong khi chờ PG xử lý
+            senderWallet.setAvailableBalance(senderWallet.getAvailableBalance().subtract(amount));
+            senderWallet.setHoldBalance(senderWallet.getHoldBalance().add(amount));
+
             String referenceCode = UUID.randomUUID().toString();
             WalletTransactionEntity debitTransaction = buildWalletTransferTransaction(
                     senderWallet,
@@ -253,54 +257,22 @@ public class WalletBankServiceImpl implements WalletBankService {
             );
 
             WalletTransactionEntity savedDebitTransaction = walletTransactionRepository.save(debitTransaction);
-            WalletTransactionEntity savedCreditTransaction = walletTransactionRepository.save(creditTransaction);
-            WalletProcessingResult processingResult = processTransaction(
-                    userId,
-                    Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_OUT,
-                    amount,
-                    idempotencyKey,
-                    referenceCode
-            );
-            if (Constant.STATUS_PENDING.equals(processingResult.getStatus())) {
-                notifyTransaction(senderWallet.getUser(), savedDebitTransaction, recipientWallet.getUser());
-                notifyTransaction(recipientWallet.getUser(), savedCreditTransaction);
-                return toWalletTransactionResponse(walletTransactionMapper.toDto(savedDebitTransaction));
-            }
-            if (!Constant.STATUS_SUCCESS.equals(processingResult.getStatus())) {
-                savedDebitTransaction.setStatus(Constant.STATUS_FAILED);
-                savedCreditTransaction.setStatus(Constant.STATUS_FAILED);
-                walletTransactionRepository.save(savedCreditTransaction);
-                WalletTransactionEntity savedFailedDebitTransaction = walletTransactionRepository.save(savedDebitTransaction);
-                notifyTransaction(senderWallet.getUser(), savedFailedDebitTransaction, recipientWallet.getUser());
-                notifyTransaction(recipientWallet.getUser(), savedCreditTransaction);
-                return toWalletTransactionResponse(walletTransactionMapper.toDto(savedFailedDebitTransaction));
-            }
+            walletTransactionRepository.save(creditTransaction);
 
-            senderWallet.setAvailableBalance(senderWallet.getAvailableBalance().subtract(amount));
-            recipientWallet.setAvailableBalance(recipientWallet.getAvailableBalance().add(amount));
-            savedDebitTransaction.setStatus(Constant.STATUS_SUCCESS);
-            savedCreditTransaction.setStatus(Constant.STATUS_SUCCESS);
-            createLedgerEntry(
-                    savedDebitTransaction,
-                    senderWallet,
-                    Constant.LEDGER_ENTRY_TYPE_DEBIT,
-                    amount,
-                    senderWallet.getAvailableBalance(),
-                    buildWalletTransferDescription(Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_OUT, recipientWallet.getUser())
+            // Submit lên PaymentGateway qua Kafka (async)
+            walletTransactionProcessor.process(
+                    WalletProcessingRequest.builder()
+                            .userId(userId)
+                            .transactionType(Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_OUT)
+                            .amount(amount)
+                            .idempotencyKey(idempotencyKey)
+                            .referenceCode(referenceCode)
+                            .build()
             );
-            createLedgerEntry(
-                    savedCreditTransaction,
-                    recipientWallet,
-                    Constant.LEDGER_ENTRY_TYPE_CREDIT,
-                    amount,
-                    recipientWallet.getAvailableBalance(),
-                    buildWalletTransferDescription(Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_IN, senderWallet.getUser())
-            );
-            WalletTransactionEntity savedCreditSuccessTransaction = walletTransactionRepository.save(savedCreditTransaction);
-            WalletTransactionEntity savedDebitSuccessTransaction = walletTransactionRepository.save(savedDebitTransaction);
-            notifyTransaction(senderWallet.getUser(), savedDebitSuccessTransaction, recipientWallet.getUser());
-            notifyTransaction(recipientWallet.getUser(), savedCreditSuccessTransaction);
-            return toWalletTransactionResponse(walletTransactionMapper.toDto(savedDebitSuccessTransaction));
+
+            // Trả về PENDING ngay - kết quả thực sẽ được cập nhật khi nhận Kafka response
+            notifyTransaction(senderWallet.getUser(), savedDebitTransaction, recipientWallet.getUser());
+            return toWalletTransactionResponse(walletTransactionMapper.toDto(savedDebitTransaction));
         } catch (RuntimeException e) {
             notifyTransactionError(
                     userId,
@@ -406,7 +378,7 @@ public class WalletBankServiceImpl implements WalletBankService {
                 .orElseThrow(() -> new AuthException(Constant.MESSAGE_WALLET_NOT_FOUND, Constant.ERROR_WALLET_NOT_FOUND));
         LinkedBankAccountEntity bankAccount = linkedBankAccountRepository.findByIdAndUserIdForUpdate(request.getLinkedBankAccountId(), userId)
                 .orElseThrow(() -> new AuthException(Constant.MESSAGE_BANK_ACCOUNT_NOT_FOUND, Constant.ERROR_BANK_ACCOUNT_NOT_FOUND));
-        BankEntity bank = bankRepository.findByIdForUpdate(bankAccount.getBank().getId())
+        BankEntity bank = bankRepository.findById(bankAccount.getBank().getId())
                 .orElseThrow(() -> new AuthException(Constant.MESSAGE_BANK_NOT_FOUND, Constant.ERROR_BANK_NOT_FOUND));
 
         ensureActiveUser(wallet.getUser());
@@ -416,6 +388,19 @@ public class WalletBankServiceImpl implements WalletBankService {
 
         BigDecimal amount = request.getAmount();
         ensureWalletTransactionLimit(userId, amount);
+
+        // Với WALLET_TO_BANK: hold balance ngay để tránh double-spend
+        if (Constant.WALLET_TRANSACTION_TYPE_WALLET_TO_BANK.equals(transactionType)) {
+            ensureEnoughBalance(
+                    wallet.getAvailableBalance(),
+                    amount,
+                    Constant.MESSAGE_INSUFFICIENT_WALLET_BALANCE,
+                    Constant.ERROR_INSUFFICIENT_WALLET_BALANCE
+            );
+            wallet.setAvailableBalance(wallet.getAvailableBalance().subtract(amount));
+            wallet.setHoldBalance(wallet.getHoldBalance().add(amount));
+        }
+
         String referenceCode = UUID.randomUUID().toString();
         WalletTransactionDTO transactionDto = WalletTransactionDTO.builder()
                 .walletId(wallet.getId())
@@ -434,64 +419,22 @@ public class WalletBankServiceImpl implements WalletBankService {
         transaction.setLinkedBankAccount(bankAccount);
         WalletTransactionEntity savedTransaction = walletTransactionRepository.save(transaction);
 
-        WalletProcessingResult processingResult = processTransaction(
-                userId,
-                transactionType,
-                amount,
-                idempotencyKey,
-                referenceCode
+        // Submit lên PaymentGateway qua Kafka (async) - kết quả sẽ được xử lý bởi PaymentResultConsumer
+        walletTransactionProcessor.process(
+                WalletProcessingRequest.builder()
+                        .userId(userId)
+                        .transactionType(transactionType)
+                        .amount(amount)
+                        .idempotencyKey(idempotencyKey)
+                        .referenceCode(referenceCode)
+                        .bankCode(bank.getBankCode())
+                        .accountNumber(bank.getAccountNumber())
+                        .build()
         );
-        if (Constant.STATUS_PENDING.equals(processingResult.getStatus())) {
-            notifyTransaction(wallet.getUser(), savedTransaction);
-            return toWalletTransactionResponse(walletTransactionMapper.toDto(savedTransaction));
-        }
-        if (!Constant.STATUS_SUCCESS.equals(processingResult.getStatus())) {
-            savedTransaction.setStatus(Constant.STATUS_FAILED);
-            WalletTransactionEntity savedFailedTransaction = walletTransactionRepository.save(savedTransaction);
-            notifyTransaction(wallet.getUser(), savedFailedTransaction);
-            return toWalletTransactionResponse(walletTransactionMapper.toDto(savedFailedTransaction));
-        }
 
-        if (Constant.WALLET_TRANSACTION_TYPE_BANK_TO_WALLET.equals(transactionType)) {
-            ensureEnoughBalance(
-                    bank.getBalance(),
-                    amount,
-                    Constant.MESSAGE_INSUFFICIENT_BANK_BALANCE,
-                    Constant.ERROR_INSUFFICIENT_BANK_BALANCE
-            );
-            bank.setBalance(bank.getBalance().subtract(amount));
-            wallet.setAvailableBalance(wallet.getAvailableBalance().add(amount));
-            createLedgerEntry(
-                    savedTransaction,
-                    wallet,
-                    Constant.LEDGER_ENTRY_TYPE_CREDIT,
-                    amount,
-                    wallet.getAvailableBalance(),
-                    buildBankTransferDescription(transactionType, bankAccount)
-            );
-        } else {
-            ensureEnoughBalance(
-                    wallet.getAvailableBalance(),
-                    amount,
-                    Constant.MESSAGE_INSUFFICIENT_WALLET_BALANCE,
-                    Constant.ERROR_INSUFFICIENT_WALLET_BALANCE
-            );
-            wallet.setAvailableBalance(wallet.getAvailableBalance().subtract(amount));
-            bank.setBalance(bank.getBalance().add(amount));
-            createLedgerEntry(
-                    savedTransaction,
-                    wallet,
-                    Constant.LEDGER_ENTRY_TYPE_DEBIT,
-                    amount,
-                    wallet.getAvailableBalance(),
-                    buildBankTransferDescription(transactionType, bankAccount)
-            );
-        }
-
-        savedTransaction.setStatus(Constant.STATUS_SUCCESS);
-        WalletTransactionEntity savedSuccessTransaction = walletTransactionRepository.save(savedTransaction);
-        notifyTransaction(wallet.getUser(), savedSuccessTransaction);
-        return toWalletTransactionResponse(walletTransactionMapper.toDto(savedSuccessTransaction));
+        // Trả về PENDING ngay - balance & ledger sẽ được update khi nhận Kafka response
+        notifyTransaction(wallet.getUser(), savedTransaction);
+        return toWalletTransactionResponse(walletTransactionMapper.toDto(savedTransaction));
     }
 
     private void notifyTransaction(UserEntity user, WalletTransactionEntity transaction) {

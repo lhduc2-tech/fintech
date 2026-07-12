@@ -19,4 +19,10 @@ public class WalletProcessingRequest {
     private String idempotencyKey;
 
     private String referenceCode;
+
+    /** Mã ngân hàng - null cho WALLET_TRANSFER_OUT */
+    private String bankCode;
+
+    /** Số tài khoản ngân hàng - null cho WALLET_TRANSFER_OUT */
+    private String accountNumber;
 }

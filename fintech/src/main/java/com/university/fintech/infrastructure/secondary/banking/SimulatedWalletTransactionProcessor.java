@@ -4,11 +4,13 @@ import com.university.fintech.domain.port.secondary.WalletTransactionProcessor;
 import com.university.fintech.domain.port.secondary.model.WalletProcessingRequest;
 import com.university.fintech.domain.port.secondary.model.WalletProcessingResult;
 import com.university.fintech.shared.constant.Constant;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.util.Locale;
 
 @Service
+@ConditionalOnProperty(name = "application.kafka.enabled", havingValue = "false", matchIfMissing = true)
 public class SimulatedWalletTransactionProcessor implements WalletTransactionProcessor {
 
     @Override
