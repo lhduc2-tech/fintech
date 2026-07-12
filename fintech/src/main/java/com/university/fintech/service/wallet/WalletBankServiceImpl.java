@@ -270,8 +270,7 @@ public class WalletBankServiceImpl implements WalletBankService {
                             .build()
             );
 
-            // Trả về PENDING ngay - kết quả thực sẽ được cập nhật khi nhận Kafka response
-            notifyTransaction(senderWallet.getUser(), savedDebitTransaction, recipientWallet.getUser());
+            // Trả PENDING ngay — email sẽ gửi sau khi nhận kết quả từ PaymentGateway (SUCCESS / FAILED)
             return toWalletTransactionResponse(walletTransactionMapper.toDto(savedDebitTransaction));
         } catch (RuntimeException e) {
             notifyTransactionError(
@@ -432,8 +431,7 @@ public class WalletBankServiceImpl implements WalletBankService {
                         .build()
         );
 
-        // Trả về PENDING ngay - balance & ledger sẽ được update khi nhận Kafka response
-        notifyTransaction(wallet.getUser(), savedTransaction);
+        // Trả PENDING ngay — email sẽ gửi sau khi nhận kết quả từ PaymentGateway (SUCCESS / FAILED)
         return toWalletTransactionResponse(walletTransactionMapper.toDto(savedTransaction));
     }
 
