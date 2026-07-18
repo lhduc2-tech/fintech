@@ -179,6 +179,9 @@ public class WalletNotificationMailServiceImpl implements WalletNotificationMail
         if (Constant.STATUS_PENDING.equals(status)) {
             return "Đang xử lý";
         }
+        if (Constant.STATUS_TIMED_OUT.equals(status)) {
+            return "Hết thời gian xử lý";
+        }
         return status;
     }
 
@@ -217,6 +220,9 @@ public class WalletNotificationMailServiceImpl implements WalletNotificationMail
         if (Constant.STATUS_FAILED.equals(status)) {
             return "#991b1b";
         }
+        if (Constant.STATUS_TIMED_OUT.equals(status)) {
+            return "#7c3aed";
+        }
         return "#92400e";
     }
 
@@ -226,6 +232,9 @@ public class WalletNotificationMailServiceImpl implements WalletNotificationMail
         }
         if (Constant.STATUS_FAILED.equals(status)) {
             return "#fee2e2";
+        }
+        if (Constant.STATUS_TIMED_OUT.equals(status)) {
+            return "#ede9fe";
         }
         return "#fef3c7";
     }

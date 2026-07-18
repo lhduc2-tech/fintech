@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -43,5 +44,22 @@ public interface WalletTransactionRepository extends BaseJPARepository<WalletTra
             @Param("statuses") Collection<String> statuses,
             @Param("from") OffsetDateTime from,
             @Param("to") OffsetDateTime to
+    );
+
+    /**
+     * Tìm tất cả giao dịch PENDING được tạo trước thời điểm cutoff.
+     * Không dùng PESSIMISTIC_WRITE ở đây — plain SELECT để không yêu cầu transaction.
+     * Row-level lock được thực hiện bên trong PendingTransactionTimeoutProcessor
+     * khi xử lý từng giao dịch riêng lẻ trong @Transactional riêng.
+     */
+    @Query("""
+            select t from WalletTransactionEntity t
+            where t.status = 'PENDING'
+              and t.createdAt < :cutoff
+              and t.type in :types
+            """)
+    List<WalletTransactionEntity> findPendingTransactionsCreatedBefore(
+            @Param("cutoff") OffsetDateTime cutoff,
+            @Param("types") Collection<String> types
     );
 }

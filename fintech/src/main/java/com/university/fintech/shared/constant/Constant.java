@@ -16,6 +16,7 @@ public class Constant {
     public static final String STATUS_PENDING = "PENDING";
     public static final String STATUS_SUCCESS = "SUCCESS";
     public static final String STATUS_FAILED = "FAILED";
+    public static final String STATUS_TIMED_OUT = "TIMED_OUT";
 
     public static final String DEFAULT_ROLE_CODE = "USER";
 
@@ -171,4 +172,5 @@ public class Constant {
     public static final String WALLET_TRANSACTION_MAX_AMOUNT_PER_TRANSACTION = "50000000";
     public static final String WALLET_TRANSACTION_DAILY_LIMIT = "100000000";
     public static final String WALLET_TRANSACTION_MONTHLY_LIMIT = "500000000";
+    public static final String WALLET_PENDING_TIMEOUT_MINUTES_PROPERTY = "${application.wallet.pending-timeout-minutes:30}";
 }

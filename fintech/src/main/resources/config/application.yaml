@@ -20,6 +20,10 @@ logging:
 spring:
   config:
     import: optional:file:.env[.properties]
+  profiles:
+    # Kích hoạt profile "local" để dùng được DevTestOperator endpoint
+    # Xóa dòng này trước khi deploy lên production
+    active: local
   main:
     allow-bean-definition-overriding: true
   application:
@@ -141,6 +145,12 @@ application:
     email-verification-send-cooldown-seconds: ${EMAIL_VERIFICATION_SEND_COOLDOWN_SECONDS:60}
     account-unlock-code-ttl-seconds: ${ACCOUNT_UNLOCK_CODE_TTL_SECONDS:600}
     password-reset-code-ttl-seconds: ${PASSWORD_RESET_CODE_TTL_SECONDS:600}
+  wallet:
+    # Thời gian tối đa (phút) một giao dịch được phép ở trạng thái PENDING
+    # trước khi bị Scheduled Job đánh dấu là TIMED_OUT và hoàn tiền hold
+    pending-timeout-minutes: ${WALLET_PENDING_TIMEOUT_MINUTES:1}
+    # Tần suất Scheduled Job kiểm tra (ms). Mặc định: 5 phút
+    timeout-check-interval-ms: ${WALLET_TIMEOUT_CHECK_INTERVAL_MS:10000}
 
 server:
   port: 8082
