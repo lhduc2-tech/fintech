@@ -95,8 +95,10 @@ public class PaymentProcessingService {
         BigDecimal amount = request.getAmount();
 
         if (bank.getBalance().compareTo(amount) < 0) {
+            log.warn("Insufficient bank balance: bankCode={}, accountNumber={}, available={}, required={}",
+                    request.getBankCode(), request.getAccountNumber(), bank.getBalance(), amount);
             throw new InsufficientBalanceException(
-                    "Insufficient bank balance: available=" + bank.getBalance() + ", required=" + amount);
+                    "So du tai khoan ngan hang khong du de thuc hien giao dich.");
         }
         bank.setBalance(bank.getBalance().subtract(amount));
         return STATUS_SUCCESS;
@@ -124,8 +126,11 @@ public class PaymentProcessingService {
     private BankAccountEntity lockBankAccount(String bankCode, String accountNumber) {
         return bankAccountRepository
                 .findByBankCodeAndAccountNumberForUpdate(bankCode, accountNumber)
-                .orElseThrow(() -> new BankAccountNotFoundException(
-                        "Bank account not found: bankCode=" + bankCode + ", accountNumber=" + accountNumber));
+                .orElseThrow(() -> {
+                    log.warn("Bank account not found: bankCode={}, accountNumber={}", bankCode, accountNumber);
+                    return new BankAccountNotFoundException(
+                            "Khong tim thay tai khoan ngan hang.");
+                });
     }
 
     private PaymentResultMessage buildResult(PaymentRequestMessage request, String status, String failureReason) {

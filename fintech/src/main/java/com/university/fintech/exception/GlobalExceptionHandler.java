@@ -42,7 +42,7 @@ public class GlobalExceptionHandler {
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
         });
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Request validation failed.", Map.copyOf(errors));
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Du lieu gui len khong hop le. Vui long kiem tra lai cac truong.", Map.copyOf(errors));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -58,7 +58,7 @@ public class GlobalExceptionHandler {
         for (ConstraintViolation<?> violation : ex.getConstraintViolations()) {
             details.put(violation.getPropertyPath().toString(), violation.getMessage());
         }
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Request validation failed.", Map.copyOf(details));
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Du lieu gui len khong hop le. Vui long kiem tra lai cac truong.", Map.copyOf(details));
     }
 
     @ExceptionHandler(TransactionSystemException.class)
@@ -83,14 +83,14 @@ public class GlobalExceptionHandler {
         Map<String, Object> details = new HashMap<>();
         details.put("exception", ex.getClass().getSimpleName());
         details.put("rootCause", safeMessage(ex));
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, "INVALID_REQUEST_PAYLOAD", "Request body is invalid or malformed.", details);
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "INVALID_REQUEST_PAYLOAD", "Du lieu gui len khong dung dinh dang. Vui long kiem tra lai.", details);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDeniedException(AccessDeniedException ex) {
         Map<String, Object> details = new HashMap<>();
         details.put("exception", ex.getClass().getSimpleName());
-        return buildErrorResponse(HttpStatus.FORBIDDEN, "FORBIDDEN", "You do not have permission to access this resource.", details);
+        return buildErrorResponse(HttpStatus.FORBIDDEN, "FORBIDDEN", "Ban khong co quyen truy cap tai nguyen nay.", details);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
@@ -99,7 +99,7 @@ public class GlobalExceptionHandler {
         details.put("exception", ex.getClass().getSimpleName());
         details.put("method", ex.getMethod());
         details.put("supportedMethods", ex.getSupportedHttpMethods() == null ? java.util.List.of() : ex.getSupportedHttpMethods().stream().map(org.springframework.http.HttpMethod::name).toList());
-        return buildErrorResponse(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", "HTTP method is not supported for this endpoint.", details);
+        return buildErrorResponse(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", "Phuong thuc HTTP nay khong duoc ho tro cho endpoint nay.", details);
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
@@ -109,13 +109,13 @@ public class GlobalExceptionHandler {
             details.put("exception", ex.getClass().getSimpleName());
             details.put("method", request.getMethod());
             details.put("path", request.getRequestURI());
-            return buildErrorResponse(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", "HTTP method is not supported for this endpoint.", details);
+            return buildErrorResponse(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", "Phuong thuc HTTP nay khong duoc ho tro cho endpoint nay.", details);
         }
 
         Map<String, Object> details = new HashMap<>();
         details.put("exception", ex.getClass().getSimpleName());
         details.put("path", request == null ? "" : request.getRequestURI());
-        return buildErrorResponse(HttpStatus.NOT_FOUND, "NOT_FOUND", "The requested resource was not found.", details);
+        return buildErrorResponse(HttpStatus.NOT_FOUND, "NOT_FOUND", "Khong tim thay tai nguyen yeu cau.", details);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -136,16 +136,16 @@ public class GlobalExceptionHandler {
         String message = safeMessage(ex.getMostSpecificCause()).toLowerCase();
 
         if ((message.contains("email") && message.contains("unique")) || message.contains("users_email_key")) {
-            return "Email already exists.";
+            return "Email nay da duoc dang ky. Vui long dung email khac hoac dang nhap.";
         }
         if ((message.contains("phone_number") && message.contains("unique")) || message.contains("users_phone_number_key")) {
-            return "Phone number already exists.";
+            return "So dien thoai nay da duoc dang ky. Vui long thu so khac hoac dang nhap.";
         }
         if (message.contains("status") && message.contains("null")) {
-            return "User status is required.";
+            return "Trang thai nguoi dung la bat buoc.";
         }
 
-        return "Database constraint violation.";
+        return "He thong gap su co du lieu. Vui long thu lai sau.";
     }
 
     private ResponseEntity<Map<String, Object>> buildErrorResponse(
@@ -171,7 +171,7 @@ public class GlobalExceptionHandler {
     private String safeUserMessage(Exception ex) {
         String message = ex.getMessage();
         if (message == null || message.isBlank()) {
-            return "An unexpected error occurred.";
+            return "He thong dang gap su co. Vui long thu lai sau.";
         }
         return message;
     }

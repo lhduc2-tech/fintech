@@ -311,7 +311,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(readOnly = true)
     public UserProfileResponse getUserProfile(UUID userId) {
         UserEntity userEntity = userRepository.findById(userId)
-                .orElseThrow(() -> new AuthException("User not found", "USER_NOT_FOUND"));
+                .orElseThrow(() -> new AuthException(Constant.MESSAGE_USER_NOT_FOUND, Constant.ERROR_USER_NOT_FOUND));
         return UserProfileResponse.builder()
                 .fullName(userEntity.getFullName())
                 .identityNumber(userEntity.getIdentityNumber())

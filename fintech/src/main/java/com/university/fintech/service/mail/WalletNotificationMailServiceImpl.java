@@ -122,7 +122,7 @@ public class WalletNotificationMailServiceImpl implements WalletNotificationMail
             helper.setSubject(subject);
             helper.setText(html, true);
         } catch (MessagingException e) {
-            throw new IllegalStateException("Could not build wallet notification email.", e);
+            throw new IllegalStateException(Constant.MESSAGE_BUILD_VERIFICATION_EMAIL_FAILED, e);
         }
         mailSender.send(message);
     }
