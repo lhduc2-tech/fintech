@@ -44,6 +44,11 @@ public class KafkaWalletTransactionProcessor implements WalletTransactionProcess
                 .idempotencyKey(request.getIdempotencyKey())
                 .bankCode(request.getBankCode())
                 .accountNumber(request.getAccountNumber())
+                .userEmail(request.getUserEmail())
+                .userFullName(request.getUserFullName())
+                .description(request.getDescription())
+                .recipientFullName(request.getRecipientFullName())
+                .recipientPhoneNumber(request.getRecipientPhoneNumber())
                 .timestamp(OffsetDateTime.now().toString())
                 .build();
 

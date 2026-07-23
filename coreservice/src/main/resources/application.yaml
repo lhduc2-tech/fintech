@@ -1,0 +1,85 @@
+logging:
+  level:
+    com:
+      university:
+        coreservice: DEBUG
+
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  main:
+    allow-bean-definition-overriding: true
+  application:
+    name: coreservice
+  threads:
+    virtual:
+      enabled: true
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    properties:
+      security.protocol: SASL_SSL
+      sasl.mechanism: SCRAM-SHA-256
+      sasl.jaas.config: "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"${KAFKA_SASL_USERNAME:}\" password=\"${KAFKA_SASL_PASSWORD:}\";"
+      ssl.truststore.type: PEM
+      ssl.truststore.location: ${KAFKA_CA_CERT_PATH:kafka-ca.pem}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      retries: 3
+      properties:
+        enable.idempotence: true
+        compression.type: lz4
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      auto-commit: false
+      pool-name: CoreServiceHikari
+      maximum-pool-size: 20
+      minimum-idle: 10
+      connection-timeout: 5000
+      idle-timeout: 300000
+      max-lifetime: 600000
+      leak-detection-threshold: 5000
+    type: com.zaxxer.hikari.HikariDataSource
+    url: ${DB_URL}
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+      naming:
+        implicit-strategy: org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy
+        physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+    open-in-view: false
+    properties:
+      hibernate:
+        connection:
+          provider_disables_autocommit: true
+        generate_statistics: false
+        jdbc:
+          batch_size: 25
+          time_zone: UTC
+        order_inserts: true
+        order_updates: true
+        show_sql: false
+        format_sql: false
+
+application:
+  kafka:
+    payment-result-topic: payment.result
+    payment-mail-topic: payment.mail
+    payload-secret-key: ${KAFKA_PAYLOAD_SECRET_KEY:}
+
+server:
+  port: 8086
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 20
+    connection-timeout: 5000ms
+    max-connections: 8192
+    accept-count: 200

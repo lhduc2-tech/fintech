@@ -35,45 +35,15 @@ spring:
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       enable-auto-commit: false
 
-  datasource:
-    driver-class-name: org.postgresql.Driver
-    hikari:
-      auto-commit: false
-      pool-name: Hikari
-      maximum-pool-size: 20
-      minimum-idle: 5
-    type: com.zaxxer.hikari.HikariDataSource
-    url: ${DB_URL}
-    username: ${DB_USERNAME:}
-    password: ${DB_PASSWORD:}
-
-  jpa:
-    hibernate:
-      ddl-auto: none
-      naming:
-        implicit-strategy: org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy
-        physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
-    open-in-view: false
-    properties:
-      hibernate:
-        connection:
-          provider_disables_autocommit: true
-        generate_statistics: false
-        jdbc:
-          batch_size: 25
-          time_zone: UTC
-        order_inserts: true
-        order_updates: true
-        show_sql: true
-        format_sql: true
-
 application:
   kafka:
     payment-request-topic: payment.request
-    payment-result-topic: payment.result
     payload-secret-key: ${KAFKA_PAYLOAD_SECRET_KEY:}
+  coreservice:
+    url: ${CORE_SERVICE_URL:http://localhost:8086}
 
 server:
   port: 8084
   servlet:
     context-path: ${SERVER_CTX_PATH:}
+

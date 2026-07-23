@@ -6,6 +6,8 @@
       <list>
         <option value="$PROJECT_DIR$/fintech/pom.xml" />
         <option value="$PROJECT_DIR$/paymentgateway/pom.xml" />
+        <option value="$PROJECT_DIR$/coreservice/pom.xml" />
+        <option value="$PROJECT_DIR$/notificationservice/pom.xml" />
       </list>
     </option>
   </component>

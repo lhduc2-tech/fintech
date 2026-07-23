@@ -2,15 +2,12 @@ package com.university.paymentgateway;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
-import org.springframework.transaction.annotation.EnableTransactionManagement;
 
+/**
+ * PaymentGateway — service trung gian thuần túy.
+ * Nhận yêu cầu từ Kafka (payment.request), chuyển tiếp đến CoreService qua HTTP.
+ */
 @SpringBootApplication
-@EnableTransactionManagement
-@EnableJpaRepositories(
-        basePackages = "com.university.paymentgateway",
-        enableDefaultTransactions = false
-)
 public class PaymentgatewayApplication {
 
     public static void main(String[] args) {
@@ -18,3 +15,4 @@ public class PaymentgatewayApplication {
     }
 
 }
+

@@ -34,4 +34,22 @@ public class PaymentRequestMessage {
     private String accountNumber;
 
     private String timestamp;
+
+    // ── Thông tin người dùng để CoreService publish mail notification ─────────
+
+    /** Email người thực hiện giao dịch */
+    private String userEmail;
+
+    /** Tên đầy đủ người thực hiện giao dịch */
+    private String userFullName;
+
+    /** Mô tả giao dịch (VD: "Nạp tiền từ VCB 1234") */
+    private String description;
+
+    /** Tên đầy đủ người nhận (null nếu không phải WALLET_TRANSFER_OUT) */
+    private String recipientFullName;
+
+    /** Số điện thoại người nhận (null nếu không phải WALLET_TRANSFER_OUT) */
+    private String recipientPhoneNumber;
 }
+

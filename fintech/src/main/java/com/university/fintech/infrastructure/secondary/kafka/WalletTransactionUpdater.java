@@ -1,10 +1,9 @@
 package com.university.fintech.infrastructure.secondary.kafka;
 
-import com.university.fintech.domain.entity.UserEntity;
+
 import com.university.fintech.domain.entity.WalletEntity;
 import com.university.fintech.domain.entity.WalletLedgerEntryEntity;
 import com.university.fintech.domain.entity.WalletTransactionEntity;
-import com.university.fintech.domain.port.primary.WalletNotificationMailService;
 import com.university.fintech.infrastructure.secondary.jpa.repository.WalletLedgerEntryRepository;
 import com.university.fintech.infrastructure.secondary.jpa.repository.WalletRepository;
 import com.university.fintech.infrastructure.secondary.jpa.repository.WalletTransactionRepository;
@@ -22,7 +21,8 @@ import java.util.UUID;
 
 /**
  * Xử lý kết quả giao dịch từ PaymentGateway.
- * Cập nhật trạng thái transaction, số dư ví, ledger entry và gửi email.
+ * Cập nhật trạng thái transaction, số dư ví và ledger entry.
+ * Việc gửi email được đảm nhiệm bởi NotificationService (consume từ topic payment.mail).
  */
 @Slf4j
 @Service
@@ -32,7 +32,6 @@ public class WalletTransactionUpdater {
     private final WalletTransactionRepository walletTransactionRepository;
     private final WalletLedgerEntryRepository walletLedgerEntryRepository;
     private final WalletRepository walletRepository;
-    private final WalletNotificationMailService walletNotificationMailService;
 
     @Transactional
     public void handlePaymentResult(PaymentResultMessage result) {
@@ -71,12 +70,10 @@ public class WalletTransactionUpdater {
             createLedgerEntry(transaction, wallet, Constant.LEDGER_ENTRY_TYPE_CREDIT, amount,
                     wallet.getAvailableBalance(), transaction.getDescription());
             log.info("BANK_TO_WALLET SUCCESS: referenceCode={}, +{}", referenceCode, amount);
-            notifyUser(transaction.getWallet().getUser(), transaction);
         } else {
             transaction.setStatus(Constant.STATUS_FAILED);
             walletTransactionRepository.save(transaction);
             log.info("BANK_TO_WALLET FAILED: referenceCode={}, reason={}", referenceCode, failureReason);
-            notifyUser(transaction.getWallet().getUser(), transaction);
         }
     }
 
@@ -107,10 +104,9 @@ public class WalletTransactionUpdater {
 
             transaction.setStatus(Constant.STATUS_FAILED);
             walletTransactionRepository.save(transaction);
-            log.info("WALLET_TO_BANK FAILED: referenceCode={}, restored hold, reason={}", referenceCode, failureReason);
         }
-        notifyUser(transaction.getWallet().getUser(), transaction);
     }
+
 
     // ─── WALLET_TRANSFER ──────────────────────────────────────────────────────
 
@@ -155,8 +151,6 @@ public class WalletTransactionUpdater {
                     recipientWallet.getAvailableBalance(), creditTx.getDescription());
 
             log.info("WALLET_TRANSFER SUCCESS: referenceCode={}, amount={}", referenceCode, amount);
-            notifyUser(debitTx.getWallet().getUser(), debitTx);
-            notifyUser(creditTx.getWallet().getUser(), creditTx);
         } else {
             // Hoàn trả hold về available cho sender
             senderWallet.setHoldBalance(senderWallet.getHoldBalance().subtract(amount));
@@ -168,17 +162,11 @@ public class WalletTransactionUpdater {
             walletTransactionRepository.save(creditTx);
 
             log.info("WALLET_TRANSFER FAILED: referenceCode={}, reason={}", referenceCode, failureReason);
-            notifyUser(debitTx.getWallet().getUser(), debitTx);
-            notifyUser(creditTx.getWallet().getUser(), creditTx);
         }
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
-    /**
-     * Tìm transaction PENDING theo referenceCode + type.
-     * Nếu đã được xử lý (SUCCESS/FAILED) → bỏ qua (idempotency).
-     */
     private WalletTransactionEntity findPendingTransaction(String referenceCode, String type) {
         return walletTransactionRepository
                 .findByReferenceCodeAndType(referenceCode, type)
@@ -219,23 +207,5 @@ public class WalletTransactionUpdater {
                         .description(description)
                         .build()
         );
-    }
-
-    private void notifyUser(UserEntity user, WalletTransactionEntity transaction) {
-        try {
-            if (user == null || user.getEmail() == null || user.getEmail().isBlank()) return;
-            walletNotificationMailService.sendTransactionNotification(
-                    user.getEmail(),
-                    user.getFullName(),
-                    transaction.getType(),
-                    transaction.getAmount(),
-                    transaction.getStatus(),
-                    transaction.getReferenceCode(),
-                    transaction.getDescription(),
-                    null, null
-            );
-        } catch (Exception e) {
-            log.warn("Could not send notification to user {}: {}", user.getId(), e.getMessage());
-        }
     }
 }

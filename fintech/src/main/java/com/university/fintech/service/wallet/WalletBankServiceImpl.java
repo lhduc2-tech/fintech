@@ -267,6 +267,11 @@ public class WalletBankServiceImpl implements WalletBankService {
                             .amount(amount)
                             .idempotencyKey(idempotencyKey)
                             .referenceCode(referenceCode)
+                            .userEmail(senderWallet.getUser().getEmail())
+                            .userFullName(senderWallet.getUser().getFullName())
+                            .description(debitTransaction.getDescription())
+                            .recipientFullName(recipientWallet.getUser().getFullName())
+                            .recipientPhoneNumber(recipientWallet.getUser().getPhoneNumber())
                             .build()
             );
 
@@ -428,6 +433,9 @@ public class WalletBankServiceImpl implements WalletBankService {
                         .referenceCode(referenceCode)
                         .bankCode(bank.getBankCode())
                         .accountNumber(bank.getAccountNumber())
+                        .userEmail(wallet.getUser().getEmail())
+                        .userFullName(wallet.getUser().getFullName())
+                        .description(transaction.getDescription())
                         .build()
         );
 
