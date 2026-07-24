@@ -7,4 +7,8 @@ public interface AuthMailService {
     void sendAccountUnlockCode(String to, String fullName, String unlockCode);
 
     void sendPasswordResetCode(String to, String fullName, String resetCode);
+
+    void sendPinOtpCode(String to, String fullName, String otpCode);
+
+    void sendTransactionOtpCode(String to, String fullName, String otpCode);
 }

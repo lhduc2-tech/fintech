@@ -76,6 +76,40 @@ public class AuthMailServiceImpl implements AuthMailService {
         mailSender.send(message);
     }
 
+    @Override
+    public void sendPinOtpCode(String to, String fullName, String otpCode) {
+        MimeMessage message = mailSender.createMimeMessage();
+        try {
+            MimeMessageHelper helper = new MimeMessageHelper(message, Constant.CHARSET_UTF_8);
+            helper.setTo(to);
+            if (from != null && !from.isBlank()) {
+                helper.setFrom(from);
+            }
+            helper.setSubject(Constant.PIN_OTP_SUBJECT);
+            helper.setText(buildPinOtpTemplate(fullName, otpCode), true);
+        } catch (MessagingException e) {
+            throw new IllegalStateException(Constant.MESSAGE_BUILD_VERIFICATION_EMAIL_FAILED, e);
+        }
+        mailSender.send(message);
+    }
+
+    @Override
+    public void sendTransactionOtpCode(String to, String fullName, String otpCode) {
+        MimeMessage message = mailSender.createMimeMessage();
+        try {
+            MimeMessageHelper helper = new MimeMessageHelper(message, Constant.CHARSET_UTF_8);
+            helper.setTo(to);
+            if (from != null && !from.isBlank()) {
+                helper.setFrom(from);
+            }
+            helper.setSubject(Constant.TRANSACTION_OTP_SUBJECT);
+            helper.setText(buildTransactionOtpTemplate(fullName, otpCode), true);
+        } catch (MessagingException e) {
+            throw new IllegalStateException(Constant.MESSAGE_BUILD_VERIFICATION_EMAIL_FAILED, e);
+        }
+        mailSender.send(message);
+    }
+
     private String buildVerificationTemplate(String fullName, String verificationCode) {
         String displayName = fullName == null || fullName.isBlank() ? Constant.EMAIL_FALLBACK_DISPLAY_NAME : escapeHtml(fullName);
         return loadTemplate()
@@ -99,6 +133,20 @@ public class AuthMailServiceImpl implements AuthMailService {
         return loadTemplate(Constant.PASSWORD_RESET_TEMPLATE)
                 .replace(Constant.EMAIL_TEMPLATE_FULL_NAME_PLACEHOLDER, displayName)
                 .replace(Constant.EMAIL_TEMPLATE_RESET_CODE_PLACEHOLDER, escapeHtml(resetCode));
+    }
+
+    private String buildPinOtpTemplate(String fullName, String otpCode) {
+        String displayName = fullName == null || fullName.isBlank() ? Constant.EMAIL_FALLBACK_DISPLAY_NAME : escapeHtml(fullName);
+        return loadTemplate(Constant.PIN_OTP_TEMPLATE)
+                .replace(Constant.EMAIL_TEMPLATE_FULL_NAME_PLACEHOLDER, displayName)
+                .replace(Constant.EMAIL_TEMPLATE_PIN_OTP_PLACEHOLDER, escapeHtml(otpCode));
+    }
+
+    private String buildTransactionOtpTemplate(String fullName, String otpCode) {
+        String displayName = fullName == null || fullName.isBlank() ? Constant.EMAIL_FALLBACK_DISPLAY_NAME : escapeHtml(fullName);
+        return loadTemplate(Constant.TRANSACTION_OTP_TEMPLATE)
+                .replace(Constant.EMAIL_TEMPLATE_FULL_NAME_PLACEHOLDER, displayName)
+                .replace(Constant.EMAIL_TEMPLATE_TRANSACTION_OTP_PLACEHOLDER, escapeHtml(otpCode));
     }
 
     private String loadTemplate(String template) {
