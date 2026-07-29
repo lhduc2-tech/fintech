@@ -1,0 +1,171 @@
+---
+# ============================================================
+# DEPLOYMENT: fintech-service
+# Spring Boot chinh, port 8082
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fintech-deployment
+  namespace: fintech
+  labels:
+    app: fintech-service
+    version: "v1.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fintech-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: fintech-service
+        version: "v1.0"
+    spec:
+      containers:
+        - name: fintech-service
+          image: nigasante/fintech-service:v1.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8082
+              name: http
+          env:
+            - name: SERVER_CTX_PATH
+              value: "/fintech-service"
+            - name: DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: DB_URL
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: DB_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: JWT_SECRET
+            - name: JWT_EXPIRATION_MS
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: JWT_EXPIRATION_MS
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: KAFKA_BOOTSTRAP_SERVERS
+            - name: KAFKA_SASL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: KAFKA_SASL_USERNAME
+            - name: KAFKA_SASL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: KAFKA_SASL_PASSWORD
+            - name: KAFKA_PAYLOAD_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: KAFKA_PAYLOAD_SECRET_KEY
+            # ca.pem duoc mount vao /app/certs/ qua Volume
+            - name: KAFKA_CA_CERT_PATH
+              value: "/app/certs/ca.pem"
+            - name: REDIS_REST_URL
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: REDIS_REST_URL
+            - name: REDIS_REST_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: REDIS_REST_TOKEN
+            - name: S3_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: S3_ENDPOINT
+            - name: S3_REGION
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: S3_REGION
+            - name: S3_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: S3_KEY_ID
+            - name: S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: S3_ACCESS_KEY
+            - name: S3_BUCKET_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: S3_BUCKET_NAME
+            - name: SPRING_MAIL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: SPRING_MAIL_USERNAME
+            - name: SPRING_MAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: SPRING_MAIL_PASSWORD
+          volumeMounts:
+            - name: kafka-ca-cert
+              mountPath: /app/certs
+              readOnly: true
+          # Health checks (can chinh lai endpoint neu actuator chua duoc bat)
+          # Health probes tam thoi tat - bat lai sau khi them spring-boot-starter-actuator vao pom.xml
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+      volumes:
+        - name: kafka-ca-cert
+          secret:
+            secretName: kafka-ca-cert
+
+---
+# ============================================================
+# SERVICE: fintech-service
+# ClusterIP - internal only. Dung Ingress de expose ra ngoai.
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: fintech-service
+  namespace: fintech
+  labels:
+    app: fintech-service
+spec:
+  selector:
+    app: fintech-service
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8082
+      targetPort: 8082
+  type: ClusterIP

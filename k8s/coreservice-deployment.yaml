@@ -1,0 +1,113 @@
+---
+# ============================================================
+# DEPLOYMENT: coreservice
+# Core payment processing, port 8086
+# paymentgateway goi no qua HTTP: http://coreservice-service:8086
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coreservice-deployment
+  namespace: fintech
+  labels:
+    app: coreservice
+    version: "v1.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: coreservice
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: coreservice
+        version: "v1.0"
+    spec:
+      containers:
+        - name: coreservice
+          image: nigasante/coreservice:v1.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8086
+              name: http
+          env:
+            - name: DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: DB_URL
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: DB_PASSWORD
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: KAFKA_BOOTSTRAP_SERVERS
+            - name: KAFKA_SASL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: KAFKA_SASL_USERNAME
+            - name: KAFKA_SASL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: KAFKA_SASL_PASSWORD
+            - name: KAFKA_PAYLOAD_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fintech-secrets
+                  key: KAFKA_PAYLOAD_SECRET_KEY
+            - name: KAFKA_CA_CERT_PATH
+              value: "/app/certs/ca.pem"
+          volumeMounts:
+            - name: kafka-ca-cert
+              mountPath: /app/certs
+              readOnly: true
+          # Health probes tam thoi tat - bat lai sau khi them spring-boot-starter-actuator vao pom.xml
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+      volumes:
+        - name: kafka-ca-cert
+          secret:
+            secretName: kafka-ca-cert
+
+---
+# ============================================================
+# SERVICE: coreservice
+# paymentgateway se truy cap qua: http://coreservice-service:8086
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: coreservice-service
+  namespace: fintech
+  labels:
+    app: coreservice
+spec:
+  selector:
+    app: coreservice
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8086
+      targetPort: 8086
+  type: ClusterIP
