@@ -32,4 +32,12 @@ public class WalletTransferRequest {
     @NotBlank
     @Size(max = 100)
     private String idempotencyKey;
+
+    /** Mã PIN (6 chữ số) — bắt buộc nếu user đã tạo PIN. */
+    @Size(min = 6, max = 6)
+    private String pin;
+
+    /** Mã OTP qua email — bắt buộc nếu user chưa tạo PIN. */
+    @Size(min = 6, max = 6)
+    private String otpCode;
 }

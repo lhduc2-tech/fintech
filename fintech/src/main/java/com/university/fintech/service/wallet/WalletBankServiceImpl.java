@@ -11,8 +11,11 @@ import com.university.fintech.domain.entity.WalletTransactionEntity;
 import com.university.fintech.domain.mapper.LinkedBankAccountMapper;
 import com.university.fintech.domain.mapper.WalletMapper;
 import com.university.fintech.domain.mapper.WalletTransactionMapper;
+import com.university.fintech.domain.port.primary.AuthMailService;
+import com.university.fintech.domain.port.primary.TransactionOtpService;
 import com.university.fintech.domain.port.primary.WalletNotificationMailService;
 import com.university.fintech.domain.port.primary.WalletBankService;
+import com.university.fintech.domain.port.primary.WalletPinService;
 import com.university.fintech.domain.port.secondary.WalletTransactionProcessor;
 import com.university.fintech.domain.port.secondary.model.WalletProcessingRequest;
 import com.university.fintech.domain.port.secondary.model.WalletProcessingResult;
@@ -73,6 +76,9 @@ public class WalletBankServiceImpl implements WalletBankService {
     private final WalletMapper walletMapper;
     private final LinkedBankAccountMapper linkedBankAccountMapper;
     private final WalletTransactionMapper walletTransactionMapper;
+    private final WalletPinService walletPinService;
+    private final TransactionOtpService transactionOtpService;
+    private final AuthMailService authMailService;
 
     @Override
     @Transactional(readOnly = true)
@@ -163,6 +169,7 @@ public class WalletBankServiceImpl implements WalletBankService {
     @Override
     @Transactional
     public WalletTransactionResponse topUpFromBank(UUID userId, WalletBankTransferRequest request) {
+        verifyTransactionAuth(userId, request.getPin(), request.getOtpCode());
         try {
             return executeTransfer(
                     userId,
@@ -178,6 +185,7 @@ public class WalletBankServiceImpl implements WalletBankService {
     @Override
     @Transactional
     public WalletTransactionResponse withdrawToBank(UUID userId, WalletBankTransferRequest request) {
+        verifyTransactionAuth(userId, request.getPin(), request.getOtpCode());
         try {
             return executeTransfer(
                     userId,
@@ -193,6 +201,7 @@ public class WalletBankServiceImpl implements WalletBankService {
     @Override
     @Transactional
     public WalletTransactionResponse transferToWallet(UUID userId, WalletTransferRequest request) {
+        verifyTransactionAuth(userId, request.getPin(), request.getOtpCode());
         try {
             String idempotencyKey = request.getIdempotencyKey().trim();
             var existingTransaction = walletTransactionRepository.findByIdempotencyKey(idempotencyKey);
@@ -503,6 +512,52 @@ public class WalletBankServiceImpl implements WalletBankService {
                 action.run();
             }
         });
+    }
+
+    @Override
+    @Transactional
+    public void requestTransactionOtp(UUID userId) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new AuthException(Constant.MESSAGE_USER_NOT_FOUND, Constant.ERROR_USER_NOT_FOUND));
+        String otp = transactionOtpService.createOtp(userId.toString());
+        authMailService.sendTransactionOtpCode(user.getEmail(), user.getFullName(), otp);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasPin(UUID userId) {
+        return walletPinService.hasPin(userId);
+    }
+
+    private void verifyTransactionAuth(UUID userId, String pin, String otpCode) {
+        boolean hasPinProvided = pin != null && !pin.isBlank();
+        boolean hasOtpProvided = otpCode != null && !otpCode.isBlank();
+
+        if (hasPinProvided) {
+            if (!walletPinService.hasPin(userId)) {
+                throw new AuthException(Constant.MESSAGE_INVALID_PIN, Constant.ERROR_INVALID_PIN);
+            }
+            boolean pinValid = walletPinService.verifyPin(userId, pin.trim());
+            if (!pinValid) {
+                throw new AuthException(Constant.MESSAGE_INVALID_PIN, Constant.ERROR_INVALID_PIN);
+            }
+            return;
+        }
+
+        if (hasOtpProvided) {
+            if (!transactionOtpService.isOtpValid(userId.toString(), otpCode.trim())) {
+                throw new AuthException(Constant.MESSAGE_INVALID_TRANSACTION_OTP, Constant.ERROR_INVALID_TRANSACTION_OTP);
+            }
+            transactionOtpService.consumeOtp(userId.toString());
+            return;
+        }
+
+        // Cả 2 đều không được truyền
+        if (walletPinService.hasPin(userId)) {
+            throw new AuthException(Constant.MESSAGE_PIN_REQUIRED, Constant.ERROR_PIN_REQUIRED);
+        } else {
+            throw new AuthException(Constant.MESSAGE_TRANSACTION_OTP_REQUIRED, Constant.ERROR_TRANSACTION_OTP_REQUIRED);
+        }
     }
 
     private WalletEntity findWallet(UUID userId) {

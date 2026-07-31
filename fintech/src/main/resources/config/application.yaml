@@ -148,9 +148,17 @@ application:
   wallet:
     # Thời gian tối đa (phút) một giao dịch được phép ở trạng thái PENDING
     # trước khi bị Scheduled Job đánh dấu là TIMED_OUT và hoàn tiền hold
-    pending-timeout-minutes: ${WALLET_PENDING_TIMEOUT_MINUTES:1}
+    pending-timeout-minutes: ${WALLET_PENDING_TIMEOUT_MINUTES:5}
     # Tần suất Scheduled Job kiểm tra (ms). Mặc định: 5 phút
-    timeout-check-interval-ms: ${WALLET_TIMEOUT_CHECK_INTERVAL_MS:10000}
+    timeout-check-interval-ms: ${WALLET_TIMEOUT_CHECK_INTERVAL_MS:360000}
+    # TTL (giây) của OTP xác nhận tạo mã PIN (mặc định: 300s = 5 phút)
+    pin-otp-ttl-seconds: ${WALLET_PIN_OTP_TTL_SECONDS:300}
+    # TTL (giây) của PIN hash tạm chờ xác nhận (mặc định: 300s = 5 phút)
+    pin-pending-ttl-seconds: ${WALLET_PIN_PENDING_TTL_SECONDS:300}
+    # TTL (giây) của OTP xác thực giao dịch khi chưa có PIN (mặc định: 300s = 5 phút)
+    tx-otp-ttl-seconds: ${WALLET_TX_OTP_TTL_SECONDS:300}
+    # Số lần nhập PIN sai tối đa trước khi bị khóa (mặc định: 5 lần)
+    pin-max-failed-attempts: ${WALLET_PIN_MAX_FAILED_ATTEMPTS:5}
 
 server:
   port: 8082

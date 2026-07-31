@@ -37,6 +37,10 @@ public interface WalletBankService {
 
     WalletTransactionResponse transferToWallet(UUID userId, WalletTransferRequest request);
 
+    void requestTransactionOtp(UUID userId);
+
+    boolean hasPin(UUID userId);
+
     WalletRecipientLookupResponse lookupTransferRecipient(UUID userId, WalletRecipientLookupRequest request);
 
     WalletTransactionDetailResponse getTransactionDetail(UUID userId, UUID transactionId);
