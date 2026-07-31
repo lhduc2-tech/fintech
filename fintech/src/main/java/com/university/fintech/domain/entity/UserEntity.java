@@ -53,6 +53,13 @@ public class UserEntity extends BaseAuditing {
     @Column(name = "failed_login_attempts")
     private Integer failedLoginAttempts = 0;
 
+    @Column(name = "pin_hash")
+    private String pinHash;
+
+    @Builder.Default
+    @Column(name = "pin_failed_attempts")
+    private Integer pinFailedAttempts = 0;
+
     @Builder.Default
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
@@ -74,6 +81,9 @@ public class UserEntity extends BaseAuditing {
         }
         if (failedLoginAttempts == null) {
             failedLoginAttempts = 0;
+        }
+        if (pinFailedAttempts == null) {
+            pinFailedAttempts = 0;
         }
     }
 }
