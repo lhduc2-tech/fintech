@@ -16,6 +16,7 @@ import com.university.fintech.infrastructure.primary.restful.response.wallet.Wal
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletQrResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRecipientLookupResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRetryContextResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionDetailResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionHistoryResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionResponse;
@@ -119,6 +120,29 @@ public class WalletOperator {
             @PathVariable UUID id
     ) {
         return walletBankService.getTransactionDetail(extractUserId(authentication), id);
+    }
+
+    /**
+     * Lấy context của giao dịch thất bại để client pre-fill lại màn hình xác nhận khi retry.
+     *
+     * <p>Response bao gồm:
+     * <ul>
+     *   <li>{@code retryable} — có thể thử lại không (chỉ {@code FAILED}/{@code TIMED_OUT})</li>
+     *   <li>{@code amount}, {@code type} — thông tin giao dịch</li>
+     *   <li>{@code recipientPhoneNumber}, {@code recipientFullName} — cho chuyển ví</li>
+     *   <li>{@code linkedBankAccountId} — cho giao dịch bank</li>
+     *   <li>{@code nonRetryableReason} — lý do nếu không thể retry</li>
+     * </ul>
+     *
+     * <p>Client nên generate {@code idempotencyKey} mới khi thực hiận retry,
+     * và yêu cầu nhập lại PIN hoặc request OTP mới.
+     */
+    @GetMapping("/transactions/{id}/retry-context")
+    public WalletRetryContextResponse getRetryContext(
+            Authentication authentication,
+            @PathVariable UUID id
+    ) {
+        return walletBankService.getRetryContext(extractUserId(authentication), id);
     }
 
     @PostMapping("/transactions/search")

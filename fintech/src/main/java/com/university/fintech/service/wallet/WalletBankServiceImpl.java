@@ -39,6 +39,7 @@ import com.university.fintech.infrastructure.primary.restful.response.wallet.Wal
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletQrResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRecipientLookupResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRetryContextResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionDetailResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionHistoryResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionResponse;
@@ -328,6 +329,72 @@ public class WalletBankServiceImpl implements WalletBankService {
         return WalletRecipientLookupResponse.builder()
                 .fullName(recipient.getFullName())
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public WalletRetryContextResponse getRetryContext(UUID userId, UUID transactionId) {
+        WalletTransactionEntity tx = walletTransactionRepository.findByIdAndUserId(transactionId, userId)
+                .orElseThrow(() -> new AuthException(
+                        Constant.MESSAGE_TRANSACTION_NOT_FOUND,
+                        Constant.ERROR_TRANSACTION_NOT_FOUND
+                ));
+
+        // Chỉ DEBIT leg (TRANSFER_OUT, WALLET_TO_BANK, BANK_TO_WALLET) mới có retry context.
+        // TRANSFER_IN là credit leg nội bộ — client không tương tác trực tiếp.
+        String type = tx.getType();
+        if (Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_IN.equals(type)) {
+            return WalletRetryContextResponse.builder()
+                    .transactionId(tx.getId())
+                    .type(type)
+                    .status(tx.getStatus())
+                    .retryable(false)
+                    .amount(tx.getAmount())
+                    .description(tx.getDescription())
+                    .originalCreatedAt(tx.getCreatedAt())
+                    .nonRetryableReason("Giao dich nhan tien noi bo, khong the thu lai truc tiep.")
+                    .build();
+        }
+
+        String status = tx.getStatus();
+        boolean retryable = Constant.STATUS_FAILED.equals(status) || Constant.STATUS_TIMED_OUT.equals(status);
+
+        String nonRetryableReason = null;
+        if (!retryable) {
+            nonRetryableReason = switch (status) {
+                case Constant.STATUS_PENDING  -> "Giao dich dang duoc xu ly. Vui long cho ket qua.";
+                case Constant.STATUS_SUCCESS  -> "Giao dich da thanh cong. Khong the thu lai.";
+                default -> "Giao dich o trang thai " + status + ", khong the thu lai.";
+            };
+        }
+
+        WalletRetryContextResponse.WalletRetryContextResponseBuilder builder = WalletRetryContextResponse.builder()
+                .transactionId(tx.getId())
+                .type(type)
+                .status(status)
+                .retryable(retryable)
+                .amount(tx.getAmount())
+                .description(tx.getDescription())
+                .originalCreatedAt(tx.getCreatedAt())
+                .nonRetryableReason(nonRetryableReason);
+
+        // Điền thông tin người nhận cho giao dịch chuyển ví
+        if (Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_OUT.equals(type)
+                && tx.getCounterpartyWallet() != null
+                && tx.getCounterpartyWallet().getUser() != null) {
+            UserEntity recipient = tx.getCounterpartyWallet().getUser();
+            builder.recipientPhoneNumber(recipient.getPhoneNumber())
+                   .recipientFullName(recipient.getFullName());
+        }
+
+        // Điền thông tin tài khoản ngân hàng cho giao dịch bank
+        if ((Constant.WALLET_TRANSACTION_TYPE_WALLET_TO_BANK.equals(type)
+                || Constant.WALLET_TRANSACTION_TYPE_BANK_TO_WALLET.equals(type))
+                && tx.getLinkedBankAccount() != null) {
+            builder.linkedBankAccountId(tx.getLinkedBankAccount().getId());
+        }
+
+        return builder.build();
     }
 
     @Override
