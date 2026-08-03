@@ -39,6 +39,8 @@ public class WalletTransactionDTO {
 
     private String description;
 
+    private boolean suspicious;
+
     private OffsetDateTime createdAt;
 
     private String createdBy;
