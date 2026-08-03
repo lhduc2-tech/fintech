@@ -2,10 +2,13 @@ package com.university.fintech.domain.port.primary;
 
 import com.university.fintech.infrastructure.primary.restful.request.wallet.LinkBankAccountRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletBankTransferRequest;
+import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletQrDecodeRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletRecipientLookupRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransferRequest;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.BankResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletQrDecodeResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletQrResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRecipientLookupResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionDetailResponse;
@@ -53,4 +56,16 @@ public interface WalletBankService {
             LocalDate updatedAtTo,
             Pageable pageable
     );
+
+    /**
+     * Generate QR code image cho ví của userId hiện tại.
+     * QR encode JSON chứa phoneNumber và fullName.
+     */
+    WalletQrResponse generateWalletQr(UUID userId);
+
+    /**
+     * Decode QR content string và trả về thông tin người nhận.
+     * Dùng để tự động điền form chuyển tiền sau khi quét QR.
+     */
+    WalletQrDecodeResponse decodeWalletQr(WalletQrDecodeRequest request);
 }

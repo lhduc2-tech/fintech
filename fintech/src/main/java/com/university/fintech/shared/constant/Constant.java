@@ -211,4 +211,11 @@ public class Constant {
     public static final String WALLET_TRANSACTION_DAILY_LIMIT = "100000000";
     public static final String WALLET_TRANSACTION_MONTHLY_LIMIT = "500000000";
     public static final String WALLET_PENDING_TIMEOUT_MINUTES_PROPERTY = "${application.wallet.pending-timeout-minutes:30}";
+
+    // QR Code
+    public static final int WALLET_QR_SIZE_PX = 300;
+    public static final String ERROR_QR_INVALID = "QR_INVALID";
+    public static final String MESSAGE_QR_INVALID = "Ma QR khong hop le. Vui long thu lai.";
+    public static final String ERROR_QR_GENERATE_FAILED = "QR_GENERATE_FAILED";
+    public static final String MESSAGE_QR_GENERATE_FAILED = "Khong the tao ma QR. Vui long thu lai sau.";
 }

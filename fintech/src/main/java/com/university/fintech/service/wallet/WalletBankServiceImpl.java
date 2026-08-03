@@ -1,5 +1,13 @@
 package com.university.fintech.service.wallet;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import com.university.fintech.domain.dto.LinkedBankAccountDTO;
 import com.university.fintech.domain.dto.WalletTransactionDTO;
 import com.university.fintech.domain.entity.BankEntity;
@@ -22,10 +30,13 @@ import com.university.fintech.domain.port.secondary.model.WalletProcessingResult
 import com.university.fintech.exception.domain.AuthException;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.LinkBankAccountRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletBankTransferRequest;
+import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletQrDecodeRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletRecipientLookupRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransferRequest;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.BankResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletQrDecodeResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletQrResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRecipientLookupResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionDetailResponse;
@@ -50,13 +61,17 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import jakarta.persistence.criteria.Predicate;
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -79,6 +94,7 @@ public class WalletBankServiceImpl implements WalletBankService {
     private final WalletPinService walletPinService;
     private final TransactionOtpService transactionOtpService;
     private final AuthMailService authMailService;
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional(readOnly = true)
@@ -859,6 +875,94 @@ public class WalletBankServiceImpl implements WalletBankService {
             return null;
         }
         return value.trim().toUpperCase();
+    }
+
+    // -------------------------------------------------------------------------
+    // QR Code
+    // -------------------------------------------------------------------------
+
+    @Override
+    @Transactional(readOnly = true)
+    public WalletQrResponse generateWalletQr(UUID userId) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new AuthException(Constant.MESSAGE_USER_NOT_FOUND, Constant.ERROR_USER_NOT_FOUND));
+
+        String phoneNumber = user.getPhoneNumber();
+        String fullName = user.getFullName() != null ? user.getFullName() : "";
+
+        // Build JSON content to encode into QR
+        String qrContent;
+        try {
+            qrContent = objectMapper.writeValueAsString(
+                    Map.of("phoneNumber", phoneNumber, "fullName", fullName)
+            );
+        } catch (Exception e) {
+            log.error("Failed to serialize QR content for user {}", userId, e);
+            throw new AuthException(Constant.MESSAGE_QR_GENERATE_FAILED, Constant.ERROR_QR_GENERATE_FAILED);
+        }
+
+        // Generate QR PNG -> Base64
+        String qrBase64;
+        try {
+            int size = Constant.WALLET_QR_SIZE_PX;
+            EnumMap<EncodeHintType, Object> hints = new EnumMap<>(EncodeHintType.class);
+            hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.M);
+            hints.put(EncodeHintType.CHARACTER_SET, "UTF-8");
+            hints.put(EncodeHintType.MARGIN, 2);
+
+            QRCodeWriter writer = new QRCodeWriter();
+            BitMatrix bitMatrix = writer.encode(qrContent, BarcodeFormat.QR_CODE, size, size, hints);
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            MatrixToImageWriter.writeToStream(bitMatrix, "PNG", baos);
+            qrBase64 = Base64.getEncoder().encodeToString(baos.toByteArray());
+        } catch (Exception e) {
+            log.error("Failed to generate QR code image for user {}", userId, e);
+            throw new AuthException(Constant.MESSAGE_QR_GENERATE_FAILED, Constant.ERROR_QR_GENERATE_FAILED);
+        }
+
+        return WalletQrResponse.builder()
+                .qrBase64(qrBase64)
+                .phoneNumber(phoneNumber)
+                .fullName(fullName)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public WalletQrDecodeResponse decodeWalletQr(WalletQrDecodeRequest request) {
+        String qrContent = request.getQrContent().trim();
+
+        // Parse JSON content from QR string
+        String phoneNumber;
+        try {
+            JsonNode node = objectMapper.readTree(qrContent);
+            JsonNode phoneNode = node.get("phoneNumber");
+            if (phoneNode == null || phoneNode.isNull() || phoneNode.asText().isBlank()) {
+                throw new AuthException(Constant.MESSAGE_QR_INVALID, Constant.ERROR_QR_INVALID);
+            }
+            phoneNumber = phoneNode.asText().trim();
+        } catch (AuthException e) {
+            throw e;
+        } catch (Exception e) {
+            log.debug("Invalid QR content format: {}", qrContent, e);
+            throw new AuthException(Constant.MESSAGE_QR_INVALID, Constant.ERROR_QR_INVALID);
+        }
+
+        // Validate phone number format (10 digits)
+        if (!phoneNumber.matches(Constant.PHONE_NUMBER_PATTERN)) {
+            throw new AuthException(Constant.MESSAGE_QR_INVALID, Constant.ERROR_QR_INVALID);
+        }
+
+        // Lookup recipient — must exist and be active
+        UserEntity recipient = userRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new AuthException(Constant.MESSAGE_RECIPIENT_NOT_FOUND, Constant.ERROR_RECIPIENT_NOT_FOUND));
+        ensureActiveUser(recipient);
+
+        return WalletQrDecodeResponse.builder()
+                .phoneNumber(recipient.getPhoneNumber())
+                .fullName(recipient.getFullName())
+                .build();
     }
 
 }

@@ -6,11 +6,14 @@ import com.university.fintech.infrastructure.primary.restful.request.wallet.Conf
 import com.university.fintech.infrastructure.primary.restful.request.wallet.CreatePinRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.LinkBankAccountRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletBankTransferRequest;
+import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletQrDecodeRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletRecipientLookupRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransactionHistoryRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransferRequest;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.BankResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletQrDecodeResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletQrResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRecipientLookupResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionDetailResponse;
@@ -162,6 +165,29 @@ public class WalletOperator {
     public Map<String, String> requestTransactionOtp(Authentication authentication) {
         walletBankService.requestTransactionOtp(extractUserId(authentication));
         return Map.of("message", Constant.MESSAGE_TRANSACTION_OTP_SENT);
+    }
+
+    /**
+     * Generate QR code cho ví của user hiện tại.
+     * QR image trả về dưới dạng Base64 PNG string.
+     * Client đưa vào: {@code <img src="data:image/png;base64,{qrBase64}">}
+     */
+    @GetMapping("/qr")
+    public WalletQrResponse generateWalletQr(Authentication authentication) {
+        return walletBankService.generateWalletQr(extractUserId(authentication));
+    }
+
+    /**
+     * Decode QR content string để lấy thông tin người nhận.
+     * Client tự quét QR bằng camera, lấy raw string rồi gửi vào đây.
+     * Response trả về phoneNumber + fullName để tự động điền form chuyển tiền.
+     */
+    @PostMapping("/qr/decode")
+    public WalletQrDecodeResponse decodeWalletQr(
+            Authentication authentication,
+            @Valid @RequestBody WalletQrDecodeRequest request
+    ) {
+        return walletBankService.decodeWalletQr(request);
     }
 
     @SuppressWarnings("unchecked")
