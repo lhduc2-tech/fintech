@@ -3,6 +3,7 @@ package com.university.fintech.infrastructure.primary.restful.response.auth;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Getter
@@ -22,4 +23,6 @@ public class UserProfileResponse {
     private String phoneNumber;
 
     private Integer tier;
+
+    private BigDecimal riskScore;
 }

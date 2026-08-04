@@ -320,6 +320,7 @@ public class AuthServiceImpl implements AuthService {
                 .email(userEntity.getEmail())
                 .phoneNumber(userEntity.getPhoneNumber())
                 .tier(userEntity.getTier())
+                .riskScore(userEntity.getRiskScore())
                 .build();
     }
 }
