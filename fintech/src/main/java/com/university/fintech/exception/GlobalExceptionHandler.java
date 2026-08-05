@@ -31,7 +31,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AuthException.class)
     public ResponseEntity<Map<String, Object>> handleAuthException(AuthException ex) {
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getErrorCode(), ex.getMessage(), ex.getDetails());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getErrorCode(), ex.getMessage(), ex.isRetryable(), ex.getDetails());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -42,14 +42,14 @@ public class GlobalExceptionHandler {
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
         });
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Du lieu gui len khong hop le. Vui long kiem tra lai cac truong.", Map.copyOf(errors));
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Du lieu gui len khong hop le. Vui long kiem tra lai cac truong.", false, Map.copyOf(errors));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
         Map<String, Object> details = new HashMap<>();
         details.put("rootCause", safeMessage(ex.getMostSpecificCause()));
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, "DATA_INTEGRITY_VIOLATION", resolveDataIntegrityMessage(ex), details);
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "DATA_INTEGRITY_VIOLATION", resolveDataIntegrityMessage(ex), false, details);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
@@ -58,7 +58,7 @@ public class GlobalExceptionHandler {
         for (ConstraintViolation<?> violation : ex.getConstraintViolations()) {
             details.put(violation.getPropertyPath().toString(), violation.getMessage());
         }
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Du lieu gui len khong hop le. Vui long kiem tra lai cac truong.", Map.copyOf(details));
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Du lieu gui len khong hop le. Vui long kiem tra lai cac truong.", false, Map.copyOf(details));
     }
 
     @ExceptionHandler(TransactionSystemException.class)
@@ -75,7 +75,7 @@ public class GlobalExceptionHandler {
         Map<String, Object> details = new HashMap<>();
         details.put("exception", ex.getClass().getSimpleName());
         details.put("rootCause", safeMessage(root));
-        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", safeUserMessage(ex), details);
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", safeUserMessage(ex), true, details);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -83,14 +83,14 @@ public class GlobalExceptionHandler {
         Map<String, Object> details = new HashMap<>();
         details.put("exception", ex.getClass().getSimpleName());
         details.put("rootCause", safeMessage(ex));
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, "INVALID_REQUEST_PAYLOAD", "Du lieu gui len khong dung dinh dang. Vui long kiem tra lai.", details);
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "INVALID_REQUEST_PAYLOAD", "Du lieu gui len khong dung dinh dang. Vui long kiem tra lai.", false, details);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDeniedException(AccessDeniedException ex) {
         Map<String, Object> details = new HashMap<>();
         details.put("exception", ex.getClass().getSimpleName());
-        return buildErrorResponse(HttpStatus.FORBIDDEN, "FORBIDDEN", "Ban khong co quyen truy cap tai nguyen nay.", details);
+        return buildErrorResponse(HttpStatus.FORBIDDEN, "FORBIDDEN", "Ban khong co quyen truy cap tai nguyen nay.", false, details);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
@@ -99,7 +99,7 @@ public class GlobalExceptionHandler {
         details.put("exception", ex.getClass().getSimpleName());
         details.put("method", ex.getMethod());
         details.put("supportedMethods", ex.getSupportedHttpMethods() == null ? java.util.List.of() : ex.getSupportedHttpMethods().stream().map(org.springframework.http.HttpMethod::name).toList());
-        return buildErrorResponse(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", "Phuong thuc HTTP nay khong duoc ho tro cho endpoint nay.", details);
+        return buildErrorResponse(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", "Phuong thuc HTTP nay khong duoc ho tro cho endpoint nay.", false, details);
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
@@ -109,18 +109,18 @@ public class GlobalExceptionHandler {
             details.put("exception", ex.getClass().getSimpleName());
             details.put("method", request.getMethod());
             details.put("path", request.getRequestURI());
-            return buildErrorResponse(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", "Phuong thuc HTTP nay khong duoc ho tro cho endpoint nay.", details);
+            return buildErrorResponse(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", "Phuong thuc HTTP nay khong duoc ho tro cho endpoint nay.", false, details);
         }
 
         Map<String, Object> details = new HashMap<>();
         details.put("exception", ex.getClass().getSimpleName());
         details.put("path", request == null ? "" : request.getRequestURI());
-        return buildErrorResponse(HttpStatus.NOT_FOUND, "NOT_FOUND", "Khong tim thay tai nguyen yeu cau.", details);
+        return buildErrorResponse(HttpStatus.NOT_FOUND, "NOT_FOUND", "Khong tim thay tai nguyen yeu cau.", false, details);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(IllegalArgumentException ex) {
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, "INVALID_ARGUMENT", safeUserMessage(ex), Collections.emptyMap());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "INVALID_ARGUMENT", safeUserMessage(ex), false, Collections.emptyMap());
     }
 
     @ExceptionHandler(Exception.class)
@@ -129,7 +129,8 @@ public class GlobalExceptionHandler {
         Map<String, Object> details = new HashMap<>();
         details.put("exception", ex.getClass().getSimpleName());
         details.put("rootCause", safeMessage(ex.getCause()));
-        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", safeUserMessage(ex), details);
+        // Lỗi 5xx không xác định (infrastructure/network) → client có thể retry
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", safeUserMessage(ex), true, details);
     }
 
     private String resolveDataIntegrityMessage(DataIntegrityViolationException ex) {
@@ -152,11 +153,13 @@ public class GlobalExceptionHandler {
             HttpStatus status,
             String error,
             String message,
+            boolean retryable,
             Map<String, ?> details
     ) {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("error", error);
         response.put("message", message);
+        response.put("retryable", retryable);
         response.put("details", details == null ? Collections.emptyMap() : details);
         return new ResponseEntity<>(response, status);
     }

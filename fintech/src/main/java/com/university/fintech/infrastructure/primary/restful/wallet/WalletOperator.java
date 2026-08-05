@@ -6,13 +6,17 @@ import com.university.fintech.infrastructure.primary.restful.request.wallet.Conf
 import com.university.fintech.infrastructure.primary.restful.request.wallet.CreatePinRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.LinkBankAccountRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletBankTransferRequest;
+import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletQrDecodeRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletRecipientLookupRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransactionHistoryRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransferRequest;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.BankResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletQrDecodeResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletQrResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRecipientLookupResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRetryContextResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionDetailResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionHistoryResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionResponse;
@@ -81,25 +85,43 @@ public class WalletOperator {
     @PostMapping("/bank-topup")
     public WalletTransactionResponse topUpFromBank(
             Authentication authentication,
-            @Valid @RequestBody WalletBankTransferRequest request
+            @Valid @RequestBody WalletBankTransferRequest request,
+            jakarta.servlet.http.HttpServletRequest servletRequest
     ) {
-        return walletBankService.topUpFromBank(extractUserId(authentication), request);
+        return walletBankService.topUpFromBank(extractUserId(authentication), request, extractClientContext(servletRequest));
     }
 
     @PostMapping("/bank-withdraw")
     public WalletTransactionResponse withdrawToBank(
             Authentication authentication,
-            @Valid @RequestBody WalletBankTransferRequest request
+            @Valid @RequestBody WalletBankTransferRequest request,
+            jakarta.servlet.http.HttpServletRequest servletRequest
     ) {
-        return walletBankService.withdrawToBank(extractUserId(authentication), request);
+        return walletBankService.withdrawToBank(extractUserId(authentication), request, extractClientContext(servletRequest));
     }
 
     @PostMapping("/transfer")
     public WalletTransactionResponse transferToWallet(
             Authentication authentication,
-            @Valid @RequestBody WalletTransferRequest request
+            @Valid @RequestBody WalletTransferRequest request,
+            jakarta.servlet.http.HttpServletRequest servletRequest
     ) {
-        return walletBankService.transferToWallet(extractUserId(authentication), request);
+        return walletBankService.transferToWallet(extractUserId(authentication), request, extractClientContext(servletRequest));
+    }
+
+    private com.university.fintech.infrastructure.primary.restful.security.ClientSecurityContext extractClientContext(jakarta.servlet.http.HttpServletRequest request) {
+        String clientIp = request.getHeader("X-Forwarded-For");
+        if (clientIp != null && !clientIp.isBlank()) {
+            clientIp = clientIp.split(",")[0].trim();
+        } else {
+            clientIp = request.getRemoteAddr();
+        }
+        return com.university.fintech.infrastructure.primary.restful.security.ClientSecurityContext.builder()
+                .deviceId(request.getHeader("X-Device-Id"))
+                .deviceFingerprint(request.getHeader("X-Device-Fingerprint"))
+                .geoLocation(request.getHeader("X-Geo-Location"))
+                .clientIp(clientIp)
+                .build();
     }
 
     @GetMapping("/transfer/recipient")
@@ -116,6 +138,29 @@ public class WalletOperator {
             @PathVariable UUID id
     ) {
         return walletBankService.getTransactionDetail(extractUserId(authentication), id);
+    }
+
+    /**
+     * Lấy context của giao dịch thất bại để client pre-fill lại màn hình xác nhận khi retry.
+     *
+     * <p>Response bao gồm:
+     * <ul>
+     *   <li>{@code retryable} — có thể thử lại không (chỉ {@code FAILED}/{@code TIMED_OUT})</li>
+     *   <li>{@code amount}, {@code type} — thông tin giao dịch</li>
+     *   <li>{@code recipientPhoneNumber}, {@code recipientFullName} — cho chuyển ví</li>
+     *   <li>{@code linkedBankAccountId} — cho giao dịch bank</li>
+     *   <li>{@code nonRetryableReason} — lý do nếu không thể retry</li>
+     * </ul>
+     *
+     * <p>Client nên generate {@code idempotencyKey} mới khi thực hiận retry,
+     * và yêu cầu nhập lại PIN hoặc request OTP mới.
+     */
+    @GetMapping("/transactions/{id}/retry-context")
+    public WalletRetryContextResponse getRetryContext(
+            Authentication authentication,
+            @PathVariable UUID id
+    ) {
+        return walletBankService.getRetryContext(extractUserId(authentication), id);
     }
 
     @PostMapping("/transactions/search")
@@ -162,6 +207,29 @@ public class WalletOperator {
     public Map<String, String> requestTransactionOtp(Authentication authentication) {
         walletBankService.requestTransactionOtp(extractUserId(authentication));
         return Map.of("message", Constant.MESSAGE_TRANSACTION_OTP_SENT);
+    }
+
+    /**
+     * Generate QR code cho ví của user hiện tại.
+     * QR image trả về dưới dạng Base64 PNG string.
+     * Client đưa vào: {@code <img src="data:image/png;base64,{qrBase64}">}
+     */
+    @GetMapping("/qr")
+    public WalletQrResponse generateWalletQr(Authentication authentication) {
+        return walletBankService.generateWalletQr(extractUserId(authentication));
+    }
+
+    /**
+     * Decode QR content string để lấy thông tin người nhận.
+     * Client tự quét QR bằng camera, lấy raw string rồi gửi vào đây.
+     * Response trả về phoneNumber + fullName để tự động điền form chuyển tiền.
+     */
+    @PostMapping("/qr/decode")
+    public WalletQrDecodeResponse decodeWalletQr(
+            Authentication authentication,
+            @Valid @RequestBody WalletQrDecodeRequest request
+    ) {
+        return walletBankService.decodeWalletQr(request);
     }
 
     @SuppressWarnings("unchecked")

@@ -18,4 +18,12 @@ public interface UserRepository extends BaseJPARepository<UserEntity, UUID> {
     Optional<UserEntity> findByPhoneNumber(String phoneNumber);
 
     Optional<UserEntity> findByEmail(String email);
+
+    long countByStatus(String status);
+
+    long countByFailedLoginAttemptsGreaterThanEqual(Integer attempts);
+
+    long countByPinFailedAttemptsGreaterThanEqual(Integer attempts);
+
+    long countByCreatedAtBetween(java.time.OffsetDateTime from, java.time.OffsetDateTime to);
 }
