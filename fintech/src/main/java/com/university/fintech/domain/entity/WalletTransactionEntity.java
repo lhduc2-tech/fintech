@@ -65,6 +65,10 @@ public class WalletTransactionEntity extends BaseAuditing {
     @Column(name = "description")
     private String description;
 
+    @Column(name = "is_suspicious", nullable = false)
+    @Builder.Default
+    private boolean suspicious = false;
+
     @PrePersist
     public void prePersist() {
         if (id == null) {

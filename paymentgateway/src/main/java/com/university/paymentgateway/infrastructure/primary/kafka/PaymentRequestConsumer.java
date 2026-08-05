@@ -30,8 +30,14 @@ public class PaymentRequestConsumer {
         PaymentRequestMessage request = null;
         try {
             request = encryptor.decrypt(encryptedPayload, PaymentRequestMessage.class);
-            log.info("Received payment request: referenceCode={}, type={}, amount={}",
-                    request.getReferenceCode(), request.getTransactionType(), request.getAmount());
+            log.info("Received payment request: referenceCode={}, type={}, amount={}, senderUserId={}, senderAccountNumber={}, oldBalance={}, newBalance={}, deviceId={}, deviceFingerprint={}, clientIp={}, geoLocation={}, velocity24hCount={}, velocity24hAmount={}, fanIn24hCount={}, fanOut24hCount={}",
+                    request.getReferenceCode(), request.getTransactionType(), request.getAmount(),
+                    request.getSenderUserId(), request.getSenderAccountNumber(),
+                    request.getOldBalance(), request.getNewBalance(),
+                    request.getDeviceId(), request.getDeviceFingerprint(),
+                    request.getClientIp(), request.getGeoLocation(),
+                    request.getVelocity24hCount(), request.getVelocity24hAmount(),
+                    request.getFanIn24hCount(), request.getFanOut24hCount());
 
             forwardService.forwardPaymentRequest(request);
 

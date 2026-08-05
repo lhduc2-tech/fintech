@@ -6,6 +6,7 @@ import com.university.fintech.shared.constant.Constant;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
@@ -48,6 +49,9 @@ public class UserEntity extends BaseAuditing {
     private String hometown;
 
     private Integer tier;
+
+    @Column(name = "risk_score")
+    private BigDecimal riskScore;
 
     @Builder.Default
     @Column(name = "failed_login_attempts")

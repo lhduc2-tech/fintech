@@ -168,20 +168,18 @@ public class WalletTransactionUpdater {
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
     private WalletTransactionEntity findPendingTransaction(String referenceCode, String type) {
-        return walletTransactionRepository
-                .findByReferenceCodeAndType(referenceCode, type)
-                .map(tx -> {
-                    if (!Constant.STATUS_PENDING.equals(tx.getStatus())) {
-                        log.warn("Transaction already processed: referenceCode={}, type={}, status={}",
-                                referenceCode, type, tx.getStatus());
-                        return null;
-                    }
-                    return tx;
-                })
-                .orElseGet(() -> {
-                    log.error("Transaction not found: referenceCode={}, type={}", referenceCode, type);
-                    return null;
-                });
+        var opt = walletTransactionRepository.findByReferenceCodeAndType(referenceCode, type);
+        if (opt.isEmpty()) {
+            log.error("Transaction not found: referenceCode={}, type={}", referenceCode, type);
+            return null;
+        }
+        WalletTransactionEntity tx = opt.get();
+        if (!Constant.STATUS_PENDING.equals(tx.getStatus())) {
+            log.warn("Transaction already processed: referenceCode={}, type={}, status={}",
+                    referenceCode, type, tx.getStatus());
+            return null;
+        }
+        return tx;
     }
 
     private WalletEntity lockWallet(UUID userId) {

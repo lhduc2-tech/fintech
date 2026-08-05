@@ -2,6 +2,7 @@ package com.university.fintech.domain.dto;
 
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
@@ -36,6 +37,8 @@ public class UserDTO {
     private String hometown;
 
     private Integer tier;
+
+    private BigDecimal riskScore;
 
     private Integer failedLoginAttempts;
 

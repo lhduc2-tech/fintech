@@ -1,5 +1,13 @@
 package com.university.fintech.service.wallet;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import com.university.fintech.domain.dto.LinkedBankAccountDTO;
 import com.university.fintech.domain.dto.WalletTransactionDTO;
 import com.university.fintech.domain.entity.BankEntity;
@@ -22,12 +30,16 @@ import com.university.fintech.domain.port.secondary.model.WalletProcessingResult
 import com.university.fintech.exception.domain.AuthException;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.LinkBankAccountRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletBankTransferRequest;
+import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletQrDecodeRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletRecipientLookupRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransferRequest;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.BankResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletQrDecodeResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletQrResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRecipientLookupResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRetryContextResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionDetailResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionHistoryResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletTransactionResponse;
@@ -37,6 +49,7 @@ import com.university.fintech.infrastructure.secondary.jpa.repository.UserReposi
 import com.university.fintech.infrastructure.secondary.jpa.repository.WalletLedgerEntryRepository;
 import com.university.fintech.infrastructure.secondary.jpa.repository.WalletRepository;
 import com.university.fintech.infrastructure.secondary.jpa.repository.WalletTransactionRepository;
+import com.university.fintech.infrastructure.primary.restful.security.ClientSecurityContext;
 import com.university.fintech.shared.constant.Constant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,14 +62,20 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.time.OffsetDateTime;
+
 import jakarta.persistence.criteria.Predicate;
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -79,6 +98,7 @@ public class WalletBankServiceImpl implements WalletBankService {
     private final WalletPinService walletPinService;
     private final TransactionOtpService transactionOtpService;
     private final AuthMailService authMailService;
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional(readOnly = true)
@@ -168,13 +188,14 @@ public class WalletBankServiceImpl implements WalletBankService {
 
     @Override
     @Transactional
-    public WalletTransactionResponse topUpFromBank(UUID userId, WalletBankTransferRequest request) {
+    public WalletTransactionResponse topUpFromBank(UUID userId, WalletBankTransferRequest request, ClientSecurityContext clientContext) {
         verifyTransactionAuth(userId, request.getPin(), request.getOtpCode());
         try {
             return executeTransfer(
                     userId,
                     request,
-                    Constant.WALLET_TRANSACTION_TYPE_BANK_TO_WALLET
+                    Constant.WALLET_TRANSACTION_TYPE_BANK_TO_WALLET,
+                    clientContext
             );
         } catch (RuntimeException e) {
             notifyTransactionError(userId, Constant.WALLET_TRANSACTION_TYPE_BANK_TO_WALLET, request.getAmount(), e);
@@ -184,13 +205,14 @@ public class WalletBankServiceImpl implements WalletBankService {
 
     @Override
     @Transactional
-    public WalletTransactionResponse withdrawToBank(UUID userId, WalletBankTransferRequest request) {
+    public WalletTransactionResponse withdrawToBank(UUID userId, WalletBankTransferRequest request, ClientSecurityContext clientContext) {
         verifyTransactionAuth(userId, request.getPin(), request.getOtpCode());
         try {
             return executeTransfer(
                     userId,
                     request,
-                    Constant.WALLET_TRANSACTION_TYPE_WALLET_TO_BANK
+                    Constant.WALLET_TRANSACTION_TYPE_WALLET_TO_BANK,
+                    clientContext
             );
         } catch (RuntimeException e) {
             notifyTransactionError(userId, Constant.WALLET_TRANSACTION_TYPE_WALLET_TO_BANK, request.getAmount(), e);
@@ -200,7 +222,7 @@ public class WalletBankServiceImpl implements WalletBankService {
 
     @Override
     @Transactional
-    public WalletTransactionResponse transferToWallet(UUID userId, WalletTransferRequest request) {
+    public WalletTransactionResponse transferToWallet(UUID userId, WalletTransferRequest request, ClientSecurityContext clientContext) {
         verifyTransactionAuth(userId, request.getPin(), request.getOtpCode());
         try {
             String idempotencyKey = request.getIdempotencyKey().trim();
@@ -269,20 +291,29 @@ public class WalletBankServiceImpl implements WalletBankService {
             walletTransactionRepository.save(creditTransaction);
 
             // Submit lên PaymentGateway qua Kafka (async)
-            walletTransactionProcessor.process(
-                    WalletProcessingRequest.builder()
-                            .userId(userId)
-                            .transactionType(Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_OUT)
-                            .amount(amount)
-                            .idempotencyKey(idempotencyKey)
-                            .referenceCode(referenceCode)
-                            .userEmail(senderWallet.getUser().getEmail())
-                            .userFullName(senderWallet.getUser().getFullName())
-                            .description(debitTransaction.getDescription())
-                            .recipientFullName(recipientWallet.getUser().getFullName())
-                            .recipientPhoneNumber(recipientWallet.getUser().getPhoneNumber())
-                            .build()
+            WalletProcessingRequest.WalletProcessingRequestBuilder requestBuilder = WalletProcessingRequest.builder()
+                    .userId(userId)
+                    .transactionType(Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_OUT)
+                    .amount(amount)
+                    .idempotencyKey(idempotencyKey)
+                    .referenceCode(referenceCode)
+                    .userEmail(senderWallet.getUser().getEmail())
+                    .userFullName(senderWallet.getUser().getFullName())
+                    .description(debitTransaction.getDescription())
+                    .recipientFullName(recipientWallet.getUser().getFullName())
+                    .recipientPhoneNumber(recipientWallet.getUser().getPhoneNumber());
+
+            enrichAntiFraudData(
+                    requestBuilder,
+                    userId,
+                    senderWallet.getAvailableBalance(),
+                    senderWallet.getAvailableBalance().subtract(amount),
+                    userId.toString(),
+                    senderWallet.getId().toString(),
+                    clientContext
             );
+
+            walletTransactionProcessor.process(requestBuilder.build());
 
             // Trả PENDING ngay — email sẽ gửi sau khi nhận kết quả từ PaymentGateway (SUCCESS / FAILED)
             return toWalletTransactionResponse(walletTransactionMapper.toDto(savedDebitTransaction));
@@ -312,6 +343,72 @@ public class WalletBankServiceImpl implements WalletBankService {
         return WalletRecipientLookupResponse.builder()
                 .fullName(recipient.getFullName())
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public WalletRetryContextResponse getRetryContext(UUID userId, UUID transactionId) {
+        WalletTransactionEntity tx = walletTransactionRepository.findByIdAndUserId(transactionId, userId)
+                .orElseThrow(() -> new AuthException(
+                        Constant.MESSAGE_TRANSACTION_NOT_FOUND,
+                        Constant.ERROR_TRANSACTION_NOT_FOUND
+                ));
+
+        // Chỉ DEBIT leg (TRANSFER_OUT, WALLET_TO_BANK, BANK_TO_WALLET) mới có retry context.
+        // TRANSFER_IN là credit leg nội bộ — client không tương tác trực tiếp.
+        String type = tx.getType();
+        if (Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_IN.equals(type)) {
+            return WalletRetryContextResponse.builder()
+                    .transactionId(tx.getId())
+                    .type(type)
+                    .status(tx.getStatus())
+                    .retryable(false)
+                    .amount(tx.getAmount())
+                    .description(tx.getDescription())
+                    .originalCreatedAt(tx.getCreatedAt())
+                    .nonRetryableReason("Giao dich nhan tien noi bo, khong the thu lai truc tiep.")
+                    .build();
+        }
+
+        String status = tx.getStatus();
+        boolean retryable = Constant.STATUS_FAILED.equals(status) || Constant.STATUS_TIMED_OUT.equals(status);
+
+        String nonRetryableReason = null;
+        if (!retryable) {
+            nonRetryableReason = switch (status) {
+                case Constant.STATUS_PENDING  -> "Giao dich dang duoc xu ly. Vui long cho ket qua.";
+                case Constant.STATUS_SUCCESS  -> "Giao dich da thanh cong. Khong the thu lai.";
+                default -> "Giao dich o trang thai " + status + ", khong the thu lai.";
+            };
+        }
+
+        WalletRetryContextResponse.WalletRetryContextResponseBuilder builder = WalletRetryContextResponse.builder()
+                .transactionId(tx.getId())
+                .type(type)
+                .status(status)
+                .retryable(retryable)
+                .amount(tx.getAmount())
+                .description(tx.getDescription())
+                .originalCreatedAt(tx.getCreatedAt())
+                .nonRetryableReason(nonRetryableReason);
+
+        // Điền thông tin người nhận cho giao dịch chuyển ví
+        if (Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_OUT.equals(type)
+                && tx.getCounterpartyWallet() != null
+                && tx.getCounterpartyWallet().getUser() != null) {
+            UserEntity recipient = tx.getCounterpartyWallet().getUser();
+            builder.recipientPhoneNumber(recipient.getPhoneNumber())
+                   .recipientFullName(recipient.getFullName());
+        }
+
+        // Điền thông tin tài khoản ngân hàng cho giao dịch bank
+        if ((Constant.WALLET_TRANSACTION_TYPE_WALLET_TO_BANK.equals(type)
+                || Constant.WALLET_TRANSACTION_TYPE_BANK_TO_WALLET.equals(type))
+                && tx.getLinkedBankAccount() != null) {
+            builder.linkedBankAccountId(tx.getLinkedBankAccount().getId());
+        }
+
+        return builder.build();
     }
 
     @Override
@@ -374,7 +471,8 @@ public class WalletBankServiceImpl implements WalletBankService {
     private WalletTransactionResponse executeTransfer(
             UUID userId,
             WalletBankTransferRequest request,
-            String transactionType
+            String transactionType,
+            ClientSecurityContext clientContext
     ) {
         String idempotencyKey = request.getIdempotencyKey().trim();
         var existingTransaction = walletTransactionRepository.findByIdempotencyKey(idempotencyKey);
@@ -433,20 +531,31 @@ public class WalletBankServiceImpl implements WalletBankService {
         WalletTransactionEntity savedTransaction = walletTransactionRepository.save(transaction);
 
         // Submit lên PaymentGateway qua Kafka (async) - kết quả sẽ được xử lý bởi PaymentResultConsumer
-        walletTransactionProcessor.process(
-                WalletProcessingRequest.builder()
-                        .userId(userId)
-                        .transactionType(transactionType)
-                        .amount(amount)
-                        .idempotencyKey(idempotencyKey)
-                        .referenceCode(referenceCode)
-                        .bankCode(bank.getBankCode())
-                        .accountNumber(bank.getAccountNumber())
-                        .userEmail(wallet.getUser().getEmail())
-                        .userFullName(wallet.getUser().getFullName())
-                        .description(transaction.getDescription())
-                        .build()
-        );
+        BigDecimal oldBal = wallet.getAvailableBalance();
+        BigDecimal newBal = Constant.WALLET_TRANSACTION_TYPE_BANK_TO_WALLET.equals(transactionType)
+                ? oldBal.add(amount)
+                : oldBal.subtract(amount);
+
+        String senderId = userId.toString();
+        String senderAcc = Constant.WALLET_TRANSACTION_TYPE_BANK_TO_WALLET.equals(transactionType)
+                ? bank.getAccountNumber()
+                : bankAccount.getId().toString();
+
+        WalletProcessingRequest.WalletProcessingRequestBuilder requestBuilder = WalletProcessingRequest.builder()
+                .userId(userId)
+                .transactionType(transactionType)
+                .amount(amount)
+                .idempotencyKey(idempotencyKey)
+                .referenceCode(referenceCode)
+                .bankCode(bank.getBankCode())
+                .accountNumber(bank.getAccountNumber())
+                .userEmail(wallet.getUser().getEmail())
+                .userFullName(wallet.getUser().getFullName())
+                .description(transaction.getDescription());
+
+        enrichAntiFraudData(requestBuilder, userId, oldBal, newBal, senderId, senderAcc, clientContext);
+
+        walletTransactionProcessor.process(requestBuilder.build());
 
         // Trả PENDING ngay — email sẽ gửi sau khi nhận kết quả từ PaymentGateway (SUCCESS / FAILED)
         return toWalletTransactionResponse(walletTransactionMapper.toDto(savedTransaction));
@@ -859,6 +968,128 @@ public class WalletBankServiceImpl implements WalletBankService {
             return null;
         }
         return value.trim().toUpperCase();
+    }
+
+    // -------------------------------------------------------------------------
+    // QR Code
+    // -------------------------------------------------------------------------
+
+    @Override
+    @Transactional(readOnly = true)
+    public WalletQrResponse generateWalletQr(UUID userId) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new AuthException(Constant.MESSAGE_USER_NOT_FOUND, Constant.ERROR_USER_NOT_FOUND));
+
+        String phoneNumber = user.getPhoneNumber();
+        String fullName = user.getFullName() != null ? user.getFullName() : "";
+
+        // Build JSON content to encode into QR
+        String qrContent;
+        try {
+            qrContent = objectMapper.writeValueAsString(
+                    Map.of("phoneNumber", phoneNumber, "fullName", fullName)
+            );
+        } catch (Exception e) {
+            log.error("Failed to serialize QR content for user {}", userId, e);
+            throw new AuthException(Constant.MESSAGE_QR_GENERATE_FAILED, Constant.ERROR_QR_GENERATE_FAILED);
+        }
+
+        // Generate QR PNG -> Base64
+        String qrBase64;
+        try {
+            int size = Constant.WALLET_QR_SIZE_PX;
+            EnumMap<EncodeHintType, Object> hints = new EnumMap<>(EncodeHintType.class);
+            hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.M);
+            hints.put(EncodeHintType.CHARACTER_SET, "UTF-8");
+            hints.put(EncodeHintType.MARGIN, 2);
+
+            QRCodeWriter writer = new QRCodeWriter();
+            BitMatrix bitMatrix = writer.encode(qrContent, BarcodeFormat.QR_CODE, size, size, hints);
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            MatrixToImageWriter.writeToStream(bitMatrix, "PNG", baos);
+            qrBase64 = Base64.getEncoder().encodeToString(baos.toByteArray());
+        } catch (Exception e) {
+            log.error("Failed to generate QR code image for user {}", userId, e);
+            throw new AuthException(Constant.MESSAGE_QR_GENERATE_FAILED, Constant.ERROR_QR_GENERATE_FAILED);
+        }
+
+        return WalletQrResponse.builder()
+                .qrBase64(qrBase64)
+                .phoneNumber(phoneNumber)
+                .fullName(fullName)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public WalletQrDecodeResponse decodeWalletQr(WalletQrDecodeRequest request) {
+        String qrContent = request.getQrContent().trim();
+
+        // Parse JSON content from QR string
+        String phoneNumber;
+        try {
+            JsonNode node = objectMapper.readTree(qrContent);
+            JsonNode phoneNode = node.get("phoneNumber");
+            if (phoneNode == null || phoneNode.isNull() || phoneNode.asText().isBlank()) {
+                throw new AuthException(Constant.MESSAGE_QR_INVALID, Constant.ERROR_QR_INVALID);
+            }
+            phoneNumber = phoneNode.asText().trim();
+        } catch (AuthException e) {
+            throw e;
+        } catch (Exception e) {
+            log.debug("Invalid QR content format: {}", qrContent, e);
+            throw new AuthException(Constant.MESSAGE_QR_INVALID, Constant.ERROR_QR_INVALID);
+        }
+
+        // Validate phone number format (10 digits)
+        if (!phoneNumber.matches(Constant.PHONE_NUMBER_PATTERN)) {
+            throw new AuthException(Constant.MESSAGE_QR_INVALID, Constant.ERROR_QR_INVALID);
+        }
+
+        // Lookup recipient — must exist and be active
+        UserEntity recipient = userRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new AuthException(Constant.MESSAGE_RECIPIENT_NOT_FOUND, Constant.ERROR_RECIPIENT_NOT_FOUND));
+        ensureActiveUser(recipient);
+
+        return WalletQrDecodeResponse.builder()
+                .phoneNumber(recipient.getPhoneNumber())
+                .fullName(recipient.getFullName())
+                .build();
+    }
+
+    private void enrichAntiFraudData(
+            WalletProcessingRequest.WalletProcessingRequestBuilder builder,
+            UUID userId,
+            BigDecimal oldBalance,
+            BigDecimal newBalance,
+            String senderUserId,
+            String senderAccountNumber,
+            ClientSecurityContext clientContext
+    ) {
+        String deviceId = clientContext != null ? clientContext.getDeviceId() : null;
+        String deviceFingerprint = clientContext != null ? clientContext.getDeviceFingerprint() : null;
+        String geoLocation = clientContext != null ? clientContext.getGeoLocation() : null;
+        String clientIp = clientContext != null ? clientContext.getClientIp() : null;
+
+        OffsetDateTime since24h = OffsetDateTime.now().minusHours(24);
+        long vCount = walletTransactionRepository.countByUserIdAndCreatedAtAfter(userId, since24h);
+        BigDecimal vAmount = walletTransactionRepository.sumAmountByUserIdAndCreatedAtAfter(userId, since24h);
+        long fanIn = walletTransactionRepository.countDistinctSendersToUserAfter(userId, since24h);
+        long fanOut = walletTransactionRepository.countDistinctRecipientsFromUserAfter(userId, since24h);
+
+        builder.senderUserId(senderUserId)
+                .senderAccountNumber(senderAccountNumber)
+                .oldBalance(oldBalance)
+                .newBalance(newBalance)
+                .deviceId(deviceId)
+                .deviceFingerprint(deviceFingerprint)
+                .geoLocation(geoLocation)
+                .clientIp(clientIp)
+                .velocity24hCount((int) vCount)
+                .velocity24hAmount(vAmount)
+                .fanIn24hCount((int) fanIn)
+                .fanOut24hCount((int) fanOut);
     }
 
 }
