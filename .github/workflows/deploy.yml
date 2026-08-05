@@ -1,0 +1,85 @@
+name: CI/CD Pipeline - Build & Deploy to AWS EC2
+
+on:
+  push:
+    branches:
+      - sonnh
+      - main
+      - master
+
+env:
+  DOCKERHUB_USERNAME: nigasante
+
+jobs:
+  build-and-push:
+    name: 1. Build & Push Docker Images
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & Push fintech-service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./fintech
+          push: true
+          tags: ${{ env.DOCKERHUB_USERNAME }}/fintech-service:latest
+
+      - name: Build & Push paymentgateway
+        uses: docker/build-push-action@v5
+        with:
+          context: ./paymentgateway
+          push: true
+          tags: ${{ env.DOCKERHUB_USERNAME }}/paymentgateway:latest
+
+      - name: Build & Push coreservice
+        uses: docker/build-push-action@v5
+        with:
+          context: ./coreservice
+          push: true
+          tags: ${{ env.DOCKERHUB_USERNAME }}/coreservice:latest
+
+      - name: Build & Push notificationservice
+        uses: docker/build-push-action@v5
+        with:
+          context: ./notificationservice
+          push: true
+          tags: ${{ env.DOCKERHUB_USERNAME }}/notificationservice:latest
+
+  deploy-ec2:
+    name: 2. Deploy to AWS EC2
+    runs-on: ubuntu-latest
+    needs: build-and-push
+
+    steps:
+      - name: Checkout code (to get docker-compose.prod.yml)
+        uses: actions/checkout@v4
+
+      - name: Copy docker-compose.prod.yml to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "docker-compose.prod.yml"
+          target: "~/"
+
+      - name: SSH into EC2 & pull latest images & restart
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d
+            docker image prune -f
+            echo "✅ Deploy hoan tat thanh cong!"
