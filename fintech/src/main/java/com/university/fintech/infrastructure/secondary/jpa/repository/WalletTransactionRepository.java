@@ -84,4 +84,18 @@ public interface WalletTransactionRepository extends BaseJPARepository<WalletTra
 
     @Query("select t from WalletTransactionEntity t left join fetch t.user where t.status in :statuses and t.createdAt >= :from and t.createdAt <= :to order by t.createdAt desc")
     List<WalletTransactionEntity> findErrorTransactionsBetween(@Param("statuses") Collection<String> statuses, @Param("from") OffsetDateTime from, @Param("to") OffsetDateTime to);
+
+    // ── Direct 24h queries for AI / Anti-Fraud feature calculations ──
+
+    @Query("select count(t) from WalletTransactionEntity t where t.user.id = :userId and t.createdAt >= :since")
+    long countByUserIdAndCreatedAtAfter(@Param("userId") UUID userId, @Param("since") OffsetDateTime since);
+
+    @Query("select coalesce(sum(t.amount), 0) from WalletTransactionEntity t where t.user.id = :userId and t.createdAt >= :since")
+    BigDecimal sumAmountByUserIdAndCreatedAtAfter(@Param("userId") UUID userId, @Param("since") OffsetDateTime since);
+
+    @Query("select count(distinct t.user.id) from WalletTransactionEntity t where t.counterpartyWallet.user.id = :userId and t.createdAt >= :since")
+    long countDistinctSendersToUserAfter(@Param("userId") UUID userId, @Param("since") OffsetDateTime since);
+
+    @Query("select count(distinct t.counterpartyWallet.user.id) from WalletTransactionEntity t where t.user.id = :userId and t.counterpartyWallet is not null and t.createdAt >= :since")
+    long countDistinctRecipientsFromUserAfter(@Param("userId") UUID userId, @Param("since") OffsetDateTime since);
 }

@@ -35,11 +35,23 @@ public interface WalletBankService {
 
     void unlinkBankAccount(UUID userId, UUID bankAccountId);
 
-    WalletTransactionResponse topUpFromBank(UUID userId, WalletBankTransferRequest request);
+    WalletTransactionResponse topUpFromBank(UUID userId, WalletBankTransferRequest request, com.university.fintech.infrastructure.primary.restful.security.ClientSecurityContext clientContext);
 
-    WalletTransactionResponse withdrawToBank(UUID userId, WalletBankTransferRequest request);
+    default WalletTransactionResponse topUpFromBank(UUID userId, WalletBankTransferRequest request) {
+        return topUpFromBank(userId, request, null);
+    }
 
-    WalletTransactionResponse transferToWallet(UUID userId, WalletTransferRequest request);
+    WalletTransactionResponse withdrawToBank(UUID userId, WalletBankTransferRequest request, com.university.fintech.infrastructure.primary.restful.security.ClientSecurityContext clientContext);
+
+    default WalletTransactionResponse withdrawToBank(UUID userId, WalletBankTransferRequest request) {
+        return withdrawToBank(userId, request, null);
+    }
+
+    WalletTransactionResponse transferToWallet(UUID userId, WalletTransferRequest request, com.university.fintech.infrastructure.primary.restful.security.ClientSecurityContext clientContext);
+
+    default WalletTransactionResponse transferToWallet(UUID userId, WalletTransferRequest request) {
+        return transferToWallet(userId, request, null);
+    }
 
     void requestTransactionOtp(UUID userId);
 

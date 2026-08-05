@@ -49,6 +49,18 @@ public class KafkaWalletTransactionProcessor implements WalletTransactionProcess
                 .description(request.getDescription())
                 .recipientFullName(request.getRecipientFullName())
                 .recipientPhoneNumber(request.getRecipientPhoneNumber())
+                .senderUserId(request.getSenderUserId())
+                .senderAccountNumber(request.getSenderAccountNumber())
+                .oldBalance(request.getOldBalance())
+                .newBalance(request.getNewBalance())
+                .deviceId(request.getDeviceId())
+                .deviceFingerprint(request.getDeviceFingerprint())
+                .clientIp(request.getClientIp())
+                .geoLocation(request.getGeoLocation())
+                .velocity24hCount(request.getVelocity24hCount())
+                .velocity24hAmount(request.getVelocity24hAmount())
+                .fanIn24hCount(request.getFanIn24hCount())
+                .fanOut24hCount(request.getFanOut24hCount())
                 .timestamp(OffsetDateTime.now().toString())
                 .build();
 

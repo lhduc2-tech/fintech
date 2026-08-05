@@ -85,25 +85,43 @@ public class WalletOperator {
     @PostMapping("/bank-topup")
     public WalletTransactionResponse topUpFromBank(
             Authentication authentication,
-            @Valid @RequestBody WalletBankTransferRequest request
+            @Valid @RequestBody WalletBankTransferRequest request,
+            jakarta.servlet.http.HttpServletRequest servletRequest
     ) {
-        return walletBankService.topUpFromBank(extractUserId(authentication), request);
+        return walletBankService.topUpFromBank(extractUserId(authentication), request, extractClientContext(servletRequest));
     }
 
     @PostMapping("/bank-withdraw")
     public WalletTransactionResponse withdrawToBank(
             Authentication authentication,
-            @Valid @RequestBody WalletBankTransferRequest request
+            @Valid @RequestBody WalletBankTransferRequest request,
+            jakarta.servlet.http.HttpServletRequest servletRequest
     ) {
-        return walletBankService.withdrawToBank(extractUserId(authentication), request);
+        return walletBankService.withdrawToBank(extractUserId(authentication), request, extractClientContext(servletRequest));
     }
 
     @PostMapping("/transfer")
     public WalletTransactionResponse transferToWallet(
             Authentication authentication,
-            @Valid @RequestBody WalletTransferRequest request
+            @Valid @RequestBody WalletTransferRequest request,
+            jakarta.servlet.http.HttpServletRequest servletRequest
     ) {
-        return walletBankService.transferToWallet(extractUserId(authentication), request);
+        return walletBankService.transferToWallet(extractUserId(authentication), request, extractClientContext(servletRequest));
+    }
+
+    private com.university.fintech.infrastructure.primary.restful.security.ClientSecurityContext extractClientContext(jakarta.servlet.http.HttpServletRequest request) {
+        String clientIp = request.getHeader("X-Forwarded-For");
+        if (clientIp != null && !clientIp.isBlank()) {
+            clientIp = clientIp.split(",")[0].trim();
+        } else {
+            clientIp = request.getRemoteAddr();
+        }
+        return com.university.fintech.infrastructure.primary.restful.security.ClientSecurityContext.builder()
+                .deviceId(request.getHeader("X-Device-Id"))
+                .deviceFingerprint(request.getHeader("X-Device-Fingerprint"))
+                .geoLocation(request.getHeader("X-Geo-Location"))
+                .clientIp(clientIp)
+                .build();
     }
 
     @GetMapping("/transfer/recipient")
