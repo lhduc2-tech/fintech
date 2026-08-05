@@ -1,7 +1,7 @@
 services:
 
   fintech-service:
-    image: nigasante/fintech-service:v1.0
+    image: nigasante/fintech-service:latest
     container_name: fintech-service
     restart: unless-stopped
     ports:
@@ -33,7 +33,7 @@ services:
       - fintech-network
 
   paymentgateway:
-    image: nigasante/paymentgateway:v1.0
+    image: nigasante/paymentgateway:latest
     container_name: paymentgateway
     restart: unless-stopped
     ports:
@@ -58,7 +58,7 @@ services:
       - fintech-network
 
   coreservice:
-    image: nigasante/coreservice:v1.0
+    image: nigasante/coreservice:latest
     container_name: coreservice
     restart: unless-stopped
     ports:
@@ -78,7 +78,7 @@ services:
       - fintech-network
 
   notificationservice:
-    image: nigasante/notificationservice:v1.0
+    image: nigasante/notificationservice:latest
     container_name: notificationservice
     restart: unless-stopped
     ports:
