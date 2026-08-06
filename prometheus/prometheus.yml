@@ -1,0 +1,30 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Prometheus tu thu thap metrics cua chinh no
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Thu thap chi so CPU/RAM/Disk cua EC2 Server qua Node Exporter
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # Thu thap metrics tu các Spring Boot microservices (neu da bat Actuator)
+  - job_name: 'fintech-service'
+    metrics_path: '/fintech-service/actuator/prometheus'
+    static_configs:
+      - targets: ['fintech-service:8082']
+
+  - job_name: 'paymentgateway'
+    metrics_path: '/paymentgateway-service/actuator/prometheus'
+    static_configs:
+      - targets: ['paymentgateway:8080']
+
+  - job_name: 'coreservice'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['coreservice:8086']

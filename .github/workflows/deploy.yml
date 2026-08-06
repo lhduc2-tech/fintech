@@ -59,16 +59,16 @@ jobs:
     needs: build-and-push
 
     steps:
-      - name: Checkout code (to get docker-compose.prod.yml)
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Copy docker-compose.prod.yml to EC2
+      - name: Copy configs (docker-compose, nginx, prometheus) to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "docker-compose.prod.yml"
+          source: "docker-compose.prod.yml,nginx/nginx.conf,prometheus/prometheus.yml"
           target: "~/"
 
       - name: SSH into EC2 & pull latest images & restart

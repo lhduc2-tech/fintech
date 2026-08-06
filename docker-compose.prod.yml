@@ -1,5 +1,6 @@
 services:
 
+  # ─── MICROSERVICES ────────────────────────────────────────────────────────
   fintech-service:
     image: nigasante/fintech-service:latest
     container_name: fintech-service
@@ -48,7 +49,6 @@ services:
       KAFKA_SASL_PASSWORD: ${KAFKA_SASL_PASSWORD}
       KAFKA_PAYLOAD_SECRET_KEY: ${KAFKA_PAYLOAD_SECRET_KEY}
       KAFKA_CA_CERT_PATH: /app/certs/ca.pem
-      # ✅ Gọi coreservice qua tên container (Docker network noi bo)
       CORE_SERVICE_URL: http://coreservice:8086
     volumes:
       - ./ca.pem:/app/certs/ca.pem:ro
@@ -96,6 +96,62 @@ services:
     networks:
       - fintech-network
 
+  # ─── REVERSE PROXY ────────────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - fintech-service
+      - paymentgateway
+      - coreservice
+    networks:
+      - fintech-network
+
+  # ─── MONITORING & METRICS ──────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - fintech-network
+
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: node-exporter
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    networks:
+      - fintech-network
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - fintech-network
+
 networks:
   fintech-network:
     driver: bridge
+
+volumes:
+  grafana-data:
