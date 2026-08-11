@@ -261,6 +261,7 @@ public class WalletBankServiceImpl implements WalletBankService {
                     Constant.ERROR_INSUFFICIENT_WALLET_BALANCE
             );
             ensureWalletTransactionLimit(userId, senderWallet, amount);
+            ensureNewAccountRestrictions(senderWallet, amount, userId);
 
             // Hold sender balance ngay để tránh double-spend trong khi chờ PG xử lý
             senderWallet.setAvailableBalance(senderWallet.getAvailableBalance().subtract(amount));
@@ -500,6 +501,7 @@ public class WalletBankServiceImpl implements WalletBankService {
 
         BigDecimal amount = request.getAmount();
         ensureWalletTransactionLimit(userId, wallet, amount);
+        ensureNewAccountRestrictions(wallet, amount, userId);
 
         // Với WALLET_TO_BANK: hold balance ngay để tránh double-spend
         if (Constant.WALLET_TRANSACTION_TYPE_WALLET_TO_BANK.equals(transactionType)) {
@@ -810,6 +812,53 @@ public class WalletBankServiceImpl implements WalletBankService {
 
     private BigDecimal zeroIfNull(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
+    }
+
+    /**
+     * Kiểm tra giới hạn giao dịch cho tài khoản mới (trong vòng 24h đầu kể từ khi đăng ký).
+     * - Không được giao dịch quá {@code NEW_ACCOUNT_MAX_AMOUNT_PER_TRANSACTION} / lần.
+     * - Không được giao dịch quá {@code NEW_ACCOUNT_MAX_DAILY_AMOUNT} / ngày.
+     */
+    private void ensureNewAccountRestrictions(WalletEntity wallet, BigDecimal amount, UUID userId) {
+        OffsetDateTime registeredAt = wallet.getUser().getCreatedAt();
+        if (registeredAt == null) {
+            return;
+        }
+        boolean isNewAccount = registeredAt.isAfter(
+                OffsetDateTime.now().minusHours(Constant.NEW_ACCOUNT_RESTRICTION_HOURS)
+        );
+        if (!isNewAccount) {
+            return;
+        }
+
+        BigDecimal maxPerTx = new BigDecimal(Constant.NEW_ACCOUNT_MAX_AMOUNT_PER_TRANSACTION);
+        if (amount.compareTo(maxPerTx) > 0) {
+            throw new AuthException(
+                    Constant.MESSAGE_NEW_ACCOUNT_AMOUNT_PER_TRANSACTION_EXCEEDED,
+                    Constant.ERROR_NEW_ACCOUNT_AMOUNT_PER_TRANSACTION_EXCEEDED
+            );
+        }
+
+        BigDecimal maxDaily = new BigDecimal(Constant.NEW_ACCOUNT_MAX_DAILY_AMOUNT);
+        ZoneId zoneId = ZoneId.systemDefault();
+        OffsetDateTime now = OffsetDateTime.now(zoneId);
+        OffsetDateTime startOfDay = now.toLocalDate().atStartOfDay(zoneId).toOffsetDateTime();
+        OffsetDateTime startOfNextDay = startOfDay.plusDays(1);
+        List<String> limitedTypes = List.of(
+                Constant.WALLET_TRANSACTION_TYPE_BANK_TO_WALLET,
+                Constant.WALLET_TRANSACTION_TYPE_WALLET_TO_BANK,
+                Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_OUT
+        );
+        List<String> countedStatuses = List.of(Constant.STATUS_PENDING, Constant.STATUS_SUCCESS);
+        BigDecimal dailyTotal = walletTransactionRepository.sumAmountByUserIdAndTypeInAndStatusInAndCreatedAtBetween(
+                userId, limitedTypes, countedStatuses, startOfDay, startOfNextDay
+        );
+        if (zeroIfNull(dailyTotal).add(amount).compareTo(maxDaily) > 0) {
+            throw new AuthException(
+                    Constant.MESSAGE_NEW_ACCOUNT_DAILY_LIMIT_EXCEEDED,
+                    Constant.ERROR_NEW_ACCOUNT_DAILY_LIMIT_EXCEEDED
+            );
+        }
     }
 
     private WalletTransactionEntity buildWalletTransferTransaction(

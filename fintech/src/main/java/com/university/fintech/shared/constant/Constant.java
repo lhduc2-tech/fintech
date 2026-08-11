@@ -129,6 +129,8 @@ public class Constant {
     public static final String ERROR_USER_NOT_ACTIVE = "USER_NOT_ACTIVE";
     public static final String ERROR_WALLET_NOT_ACTIVE = "WALLET_NOT_ACTIVE";
     public static final String ERROR_RECIPIENT_WALLET_RISK = "RECIPIENT_WALLET_RISK";
+    public static final String ERROR_NEW_ACCOUNT_AMOUNT_PER_TRANSACTION_EXCEEDED = "NEW_ACCOUNT_AMOUNT_PER_TRANSACTION_EXCEEDED";
+    public static final String ERROR_NEW_ACCOUNT_DAILY_LIMIT_EXCEEDED = "NEW_ACCOUNT_DAILY_LIMIT_EXCEEDED";
     public static final String ERROR_BANK_NOT_ACTIVE = "BANK_NOT_ACTIVE";
     public static final String ERROR_BANK_ACCOUNT_NOT_ACTIVE = "BANK_ACCOUNT_NOT_ACTIVE";
     public static final String ERROR_BANK_ACCOUNT_HAS_PENDING_TRANSACTION = "BANK_ACCOUNT_HAS_PENDING_TRANSACTION";
@@ -171,6 +173,8 @@ public class Constant {
     public static final String MESSAGE_USER_NOT_ACTIVE = "Tai khoan cua ban chua duoc kich hoat hoac da bi khoa.";
     public static final String MESSAGE_WALLET_NOT_ACTIVE = "Vi cua ban hien khong hoat dong. Vui long lien he ho tro.";
     public static final String MESSAGE_RECIPIENT_WALLET_RISK = "Khong the chuyen tien den tai khoan nay do tai khoan nguoi nhan da bi vi pham quy dinh. Vui long kiem tra lai.";
+    public static final String MESSAGE_NEW_ACCOUNT_AMOUNT_PER_TRANSACTION_EXCEEDED = "Tai khoan moi khong duoc thuc hien giao dich vuot qua 10,000,000 dong / lan trong 24 gio dau tien.";
+    public static final String MESSAGE_NEW_ACCOUNT_DAILY_LIMIT_EXCEEDED = "Tai khoan moi khong duoc thuc hien giao dich vuot qua 20,000,000 dong / ngay trong 24 gio dau tien.";
     public static final String MESSAGE_BANK_NOT_ACTIVE = "Ngan hang nay hien khong kha dung. Vui long thu ngan hang khac.";
     public static final String MESSAGE_BANK_ACCOUNT_NOT_ACTIVE = "Tai khoan ngan hang nay hien khong hoat dong.";
     public static final String MESSAGE_BANK_ACCOUNT_HAS_PENDING_TRANSACTION = "Khong the huy lien ket khi dang co giao dich cho xu ly.";
@@ -217,6 +221,10 @@ public class Constant {
     public static final String WALLET_LIMITATION_LEVEL_2_MONTHLY_LIMIT = "500000000"; // Trung cấp
     public static final String WALLET_LIMITATION_LEVEL_3_MONTHLY_LIMIT = "900000000"; // Cao cấp
     public static final int WALLET_LIMITATION_DEFAULT = 1;
+    // Giới hạn tài khoản mới (trong 24h đầu tiên kể từ khi đăng ký)
+    public static final long NEW_ACCOUNT_RESTRICTION_HOURS = 24;
+    public static final String NEW_ACCOUNT_MAX_AMOUNT_PER_TRANSACTION = "10000000";  // 10 triệu / lần
+    public static final String NEW_ACCOUNT_MAX_DAILY_AMOUNT = "20000000";            // 20 triệu / ngày
     public static final String WALLET_PENDING_TIMEOUT_MINUTES_PROPERTY = "${application.wallet.pending-timeout-minutes:30}";
 
     // QR Code
