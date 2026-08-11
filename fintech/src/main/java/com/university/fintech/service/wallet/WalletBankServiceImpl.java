@@ -251,6 +251,7 @@ public class WalletBankServiceImpl implements WalletBankService {
             ensureActiveUser(senderWallet.getUser());
             ensureActiveUser(recipientWallet.getUser());
             ensureActiveWallet(senderWallet);
+            ensureRecipientWalletNotRisk(recipientWallet);
             ensureActiveWallet(recipientWallet);
             BigDecimal amount = request.getAmount();
             ensureEnoughBalance(
@@ -724,6 +725,12 @@ public class WalletBankServiceImpl implements WalletBankService {
     private void ensureActiveWallet(WalletEntity wallet) {
         if (wallet == null || !Constant.STATUS_ACTIVE.equalsIgnoreCase(wallet.getStatus())) {
             throw new AuthException(Constant.MESSAGE_WALLET_NOT_ACTIVE, Constant.ERROR_WALLET_NOT_ACTIVE);
+        }
+    }
+
+    private void ensureRecipientWalletNotRisk(WalletEntity wallet) {
+        if (wallet != null && Constant.STATUS_RISK.equalsIgnoreCase(wallet.getStatus())) {
+            throw new AuthException(Constant.MESSAGE_RECIPIENT_WALLET_RISK, Constant.ERROR_RECIPIENT_WALLET_RISK);
         }
     }
 

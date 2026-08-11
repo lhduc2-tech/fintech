@@ -10,6 +10,7 @@ public class Constant {
     public static final int DEFAULT_SIZE = 10;
 
     public static final String STATUS_ACTIVE = "ACTIVE";
+    public static final String STATUS_RISK = "RISK";
     public static final String STATUS_UNLINKED = "UNLINKED";
     public static final String STATUS_PENDING_EMAIL_VERIFICATION = "PENDING_EMAIL_VERIFICATION";
     public static final String STATUS_LOCKED = "LOCKED";
@@ -127,6 +128,7 @@ public class Constant {
     public static final String ERROR_SELF_WALLET_TRANSFER = "SELF_WALLET_TRANSFER";
     public static final String ERROR_USER_NOT_ACTIVE = "USER_NOT_ACTIVE";
     public static final String ERROR_WALLET_NOT_ACTIVE = "WALLET_NOT_ACTIVE";
+    public static final String ERROR_RECIPIENT_WALLET_RISK = "RECIPIENT_WALLET_RISK";
     public static final String ERROR_BANK_NOT_ACTIVE = "BANK_NOT_ACTIVE";
     public static final String ERROR_BANK_ACCOUNT_NOT_ACTIVE = "BANK_ACCOUNT_NOT_ACTIVE";
     public static final String ERROR_BANK_ACCOUNT_HAS_PENDING_TRANSACTION = "BANK_ACCOUNT_HAS_PENDING_TRANSACTION";
@@ -168,6 +170,7 @@ public class Constant {
     public static final String MESSAGE_SELF_WALLET_TRANSFER = "Ban khong the chuyen tien cho chinh minh.";
     public static final String MESSAGE_USER_NOT_ACTIVE = "Tai khoan cua ban chua duoc kich hoat hoac da bi khoa.";
     public static final String MESSAGE_WALLET_NOT_ACTIVE = "Vi cua ban hien khong hoat dong. Vui long lien he ho tro.";
+    public static final String MESSAGE_RECIPIENT_WALLET_RISK = "Khong the chuyen tien den tai khoan nay do tai khoan nguoi nhan da bi vi pham quy dinh. Vui long kiem tra lai.";
     public static final String MESSAGE_BANK_NOT_ACTIVE = "Ngan hang nay hien khong kha dung. Vui long thu ngan hang khac.";
     public static final String MESSAGE_BANK_ACCOUNT_NOT_ACTIVE = "Tai khoan ngan hang nay hien khong hoat dong.";
     public static final String MESSAGE_BANK_ACCOUNT_HAS_PENDING_TRANSACTION = "Khong the huy lien ket khi dang co giao dich cho xu ly.";
