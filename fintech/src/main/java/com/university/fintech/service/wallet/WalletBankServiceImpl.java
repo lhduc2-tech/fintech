@@ -259,7 +259,7 @@ public class WalletBankServiceImpl implements WalletBankService {
                     Constant.MESSAGE_INSUFFICIENT_WALLET_BALANCE,
                     Constant.ERROR_INSUFFICIENT_WALLET_BALANCE
             );
-            ensureWalletTransactionLimit(userId, amount);
+            ensureWalletTransactionLimit(userId, senderWallet, amount);
 
             // Hold sender balance ngay để tránh double-spend trong khi chờ PG xử lý
             senderWallet.setAvailableBalance(senderWallet.getAvailableBalance().subtract(amount));
@@ -498,7 +498,7 @@ public class WalletBankServiceImpl implements WalletBankService {
         ensureActiveBank(bank);
 
         BigDecimal amount = request.getAmount();
-        ensureWalletTransactionLimit(userId, amount);
+        ensureWalletTransactionLimit(userId, wallet, amount);
 
         // Với WALLET_TO_BANK: hold balance ngay để tránh double-spend
         if (Constant.WALLET_TRANSACTION_TYPE_WALLET_TO_BANK.equals(transactionType)) {
@@ -745,9 +745,9 @@ public class WalletBankServiceImpl implements WalletBankService {
         }
     }
 
-    private void ensureWalletTransactionLimit(UUID userId, BigDecimal amount) {
+    private void ensureWalletTransactionLimit(UUID userId, WalletEntity wallet, BigDecimal amount) {
         BigDecimal dailyLimit = new BigDecimal(Constant.WALLET_TRANSACTION_DAILY_LIMIT);
-        BigDecimal monthlyLimit = new BigDecimal(Constant.WALLET_TRANSACTION_MONTHLY_LIMIT);
+        BigDecimal monthlyLimit = resolveMonthlyLimit(wallet.getLimitation());
         ZoneId zoneId = ZoneId.systemDefault();
         OffsetDateTime now = OffsetDateTime.now(zoneId);
         OffsetDateTime startOfDay = now.toLocalDate().atStartOfDay(zoneId).toOffsetDateTime();
@@ -791,6 +791,14 @@ public class WalletBankServiceImpl implements WalletBankService {
                     Constant.ERROR_WALLET_TRANSACTION_AMOUNT_LIMIT_EXCEEDED
             );
         }
+    }
+
+    private BigDecimal resolveMonthlyLimit(Integer limitation) {
+        return switch (limitation == null ? Constant.WALLET_LIMITATION_DEFAULT : limitation) {
+            case 2 -> new BigDecimal(Constant.WALLET_LIMITATION_LEVEL_2_MONTHLY_LIMIT);
+            case 3 -> new BigDecimal(Constant.WALLET_LIMITATION_LEVEL_3_MONTHLY_LIMIT);
+            default -> new BigDecimal(Constant.WALLET_LIMITATION_LEVEL_1_MONTHLY_LIMIT);
+        };
     }
 
     private BigDecimal zeroIfNull(BigDecimal value) {
@@ -876,6 +884,7 @@ public class WalletBankServiceImpl implements WalletBankService {
                 .availableBalance(wallet.getAvailableBalance())
                 .holdBalance(wallet.getHoldBalance())
                 .status(wallet.getStatus())
+                .limitation(wallet.getLimitation())
                 .build();
     }
 

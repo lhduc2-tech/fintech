@@ -23,4 +23,6 @@ public class WalletResponse {
     private BigDecimal holdBalance;
 
     private String status;
+
+    private Integer limitation;
 }

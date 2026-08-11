@@ -175,7 +175,7 @@ public class Constant {
     public static final String MESSAGE_WALLET_TRANSACTION_AMOUNT_INTEGER = "So tien phai la so nguyen (khong co phan thap phan).";
     public static final String MESSAGE_WALLET_TRANSACTION_AMOUNT_MAX_PER_TRANSACTION = "So tien moi giao dich khong duoc vuot qua 50,000,000 dong.";
     public static final String MESSAGE_WALLET_TRANSACTION_DAILY_LIMIT_EXCEEDED = "Ban da vuot han muc giao dich trong ngay (100,000,000 dong). Vui long thu lai vao ngay mai.";
-    public static final String MESSAGE_WALLET_TRANSACTION_MONTHLY_LIMIT_EXCEEDED = "Ban da vuot han muc giao dich trong thang (500,000,000 dong). Vui long thu lai vao thang sau.";
+    public static final String MESSAGE_WALLET_TRANSACTION_MONTHLY_LIMIT_EXCEEDED = "Ban da vuot han muc giao dich trong thang theo cap han muc hien tai cua vi. Vui long thu lai vao thang sau hoac lien he ho tro de nang cap han muc.";
     public static final String MESSAGE_BUILD_VERIFICATION_EMAIL_FAILED = "He thong dang gap su co khi gui email. Vui long thu lai sau.";
     public static final String MESSAGE_LOAD_VERIFICATION_EMAIL_TEMPLATE_FAILED = "He thong dang gap su co khi tai mau email. Vui long thu lai sau.";
     public static final String MESSAGE_PIN_REQUIRED = "Giao dich nay yeu cau ma PIN. Vui long nhap ma PIN cua ban.";
@@ -209,7 +209,11 @@ public class Constant {
     public static final String WALLET_PROCESSING_TEST_FAILED_TOKEN = "FAILED";
     public static final String WALLET_TRANSACTION_MAX_AMOUNT_PER_TRANSACTION = "50000000";
     public static final String WALLET_TRANSACTION_DAILY_LIMIT = "100000000";
-    public static final String WALLET_TRANSACTION_MONTHLY_LIMIT = "500000000";
+    // Giới hạn giao dịch tháng theo cấp hạn mức ví (limitation)
+    public static final String WALLET_LIMITATION_LEVEL_1_MONTHLY_LIMIT = "100000000"; // Phổ thông
+    public static final String WALLET_LIMITATION_LEVEL_2_MONTHLY_LIMIT = "500000000"; // Trung cấp
+    public static final String WALLET_LIMITATION_LEVEL_3_MONTHLY_LIMIT = "900000000"; // Cao cấp
+    public static final int WALLET_LIMITATION_DEFAULT = 1;
     public static final String WALLET_PENDING_TIMEOUT_MINUTES_PROPERTY = "${application.wallet.pending-timeout-minutes:30}";
 
     // QR Code

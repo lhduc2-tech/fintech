@@ -46,6 +46,10 @@ public class WalletEntity extends BaseAuditing {
 
     private String status;
 
+    @Builder.Default
+    @Column(name = "limitation", nullable = false)
+    private Integer limitation = 1;
+
     @PrePersist
     public void prePersist() {
         if (id == null) {
@@ -59,6 +63,9 @@ public class WalletEntity extends BaseAuditing {
         }
         if (status == null) {
             status = Constant.STATUS_ACTIVE;
+        }
+        if (limitation == null) {
+            limitation = 1;
         }
     }
 }
