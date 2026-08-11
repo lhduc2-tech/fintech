@@ -251,6 +251,7 @@ public class WalletBankServiceImpl implements WalletBankService {
             ensureActiveUser(senderWallet.getUser());
             ensureActiveUser(recipientWallet.getUser());
             ensureActiveWallet(senderWallet);
+            ensureRecipientWalletNotRisk(recipientWallet);
             ensureActiveWallet(recipientWallet);
             BigDecimal amount = request.getAmount();
             ensureEnoughBalance(
@@ -259,7 +260,8 @@ public class WalletBankServiceImpl implements WalletBankService {
                     Constant.MESSAGE_INSUFFICIENT_WALLET_BALANCE,
                     Constant.ERROR_INSUFFICIENT_WALLET_BALANCE
             );
-            ensureWalletTransactionLimit(userId, amount);
+            ensureWalletTransactionLimit(userId, senderWallet, amount);
+            ensureNewAccountRestrictions(senderWallet, amount, userId);
 
             // Hold sender balance ngay để tránh double-spend trong khi chờ PG xử lý
             senderWallet.setAvailableBalance(senderWallet.getAvailableBalance().subtract(amount));
@@ -498,7 +500,8 @@ public class WalletBankServiceImpl implements WalletBankService {
         ensureActiveBank(bank);
 
         BigDecimal amount = request.getAmount();
-        ensureWalletTransactionLimit(userId, amount);
+        ensureWalletTransactionLimit(userId, wallet, amount);
+        ensureNewAccountRestrictions(wallet, amount, userId);
 
         // Với WALLET_TO_BANK: hold balance ngay để tránh double-spend
         if (Constant.WALLET_TRANSACTION_TYPE_WALLET_TO_BANK.equals(transactionType)) {
@@ -727,6 +730,12 @@ public class WalletBankServiceImpl implements WalletBankService {
         }
     }
 
+    private void ensureRecipientWalletNotRisk(WalletEntity wallet) {
+        if (wallet != null && Constant.STATUS_RISK.equalsIgnoreCase(wallet.getStatus())) {
+            throw new AuthException(Constant.MESSAGE_RECIPIENT_WALLET_RISK, Constant.ERROR_RECIPIENT_WALLET_RISK);
+        }
+    }
+
     private void ensureActiveBankAccount(LinkedBankAccountEntity bankAccount) {
         if (bankAccount == null || !Constant.STATUS_ACTIVE.equalsIgnoreCase(bankAccount.getStatus())) {
             throw new AuthException(Constant.MESSAGE_BANK_ACCOUNT_NOT_ACTIVE, Constant.ERROR_BANK_ACCOUNT_NOT_ACTIVE);
@@ -745,9 +754,9 @@ public class WalletBankServiceImpl implements WalletBankService {
         }
     }
 
-    private void ensureWalletTransactionLimit(UUID userId, BigDecimal amount) {
+    private void ensureWalletTransactionLimit(UUID userId, WalletEntity wallet, BigDecimal amount) {
         BigDecimal dailyLimit = new BigDecimal(Constant.WALLET_TRANSACTION_DAILY_LIMIT);
-        BigDecimal monthlyLimit = new BigDecimal(Constant.WALLET_TRANSACTION_MONTHLY_LIMIT);
+        BigDecimal monthlyLimit = resolveMonthlyLimit(wallet.getLimitation());
         ZoneId zoneId = ZoneId.systemDefault();
         OffsetDateTime now = OffsetDateTime.now(zoneId);
         OffsetDateTime startOfDay = now.toLocalDate().atStartOfDay(zoneId).toOffsetDateTime();
@@ -793,8 +802,63 @@ public class WalletBankServiceImpl implements WalletBankService {
         }
     }
 
+    private BigDecimal resolveMonthlyLimit(Integer limitation) {
+        return switch (limitation == null ? Constant.WALLET_LIMITATION_DEFAULT : limitation) {
+            case 2 -> new BigDecimal(Constant.WALLET_LIMITATION_LEVEL_2_MONTHLY_LIMIT);
+            case 3 -> new BigDecimal(Constant.WALLET_LIMITATION_LEVEL_3_MONTHLY_LIMIT);
+            default -> new BigDecimal(Constant.WALLET_LIMITATION_LEVEL_1_MONTHLY_LIMIT);
+        };
+    }
+
     private BigDecimal zeroIfNull(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
+    }
+
+    /**
+     * Kiểm tra giới hạn giao dịch cho tài khoản mới (trong vòng 24h đầu kể từ khi đăng ký).
+     * - Không được giao dịch quá {@code NEW_ACCOUNT_MAX_AMOUNT_PER_TRANSACTION} / lần.
+     * - Không được giao dịch quá {@code NEW_ACCOUNT_MAX_DAILY_AMOUNT} / ngày.
+     */
+    private void ensureNewAccountRestrictions(WalletEntity wallet, BigDecimal amount, UUID userId) {
+        OffsetDateTime registeredAt = wallet.getUser().getCreatedAt();
+        if (registeredAt == null) {
+            return;
+        }
+        boolean isNewAccount = registeredAt.isAfter(
+                OffsetDateTime.now().minusHours(Constant.NEW_ACCOUNT_RESTRICTION_HOURS)
+        );
+        if (!isNewAccount) {
+            return;
+        }
+
+        BigDecimal maxPerTx = new BigDecimal(Constant.NEW_ACCOUNT_MAX_AMOUNT_PER_TRANSACTION);
+        if (amount.compareTo(maxPerTx) > 0) {
+            throw new AuthException(
+                    Constant.MESSAGE_NEW_ACCOUNT_AMOUNT_PER_TRANSACTION_EXCEEDED,
+                    Constant.ERROR_NEW_ACCOUNT_AMOUNT_PER_TRANSACTION_EXCEEDED
+            );
+        }
+
+        BigDecimal maxDaily = new BigDecimal(Constant.NEW_ACCOUNT_MAX_DAILY_AMOUNT);
+        ZoneId zoneId = ZoneId.systemDefault();
+        OffsetDateTime now = OffsetDateTime.now(zoneId);
+        OffsetDateTime startOfDay = now.toLocalDate().atStartOfDay(zoneId).toOffsetDateTime();
+        OffsetDateTime startOfNextDay = startOfDay.plusDays(1);
+        List<String> limitedTypes = List.of(
+                Constant.WALLET_TRANSACTION_TYPE_BANK_TO_WALLET,
+                Constant.WALLET_TRANSACTION_TYPE_WALLET_TO_BANK,
+                Constant.WALLET_TRANSACTION_TYPE_WALLET_TRANSFER_OUT
+        );
+        List<String> countedStatuses = List.of(Constant.STATUS_PENDING, Constant.STATUS_SUCCESS);
+        BigDecimal dailyTotal = walletTransactionRepository.sumAmountByUserIdAndTypeInAndStatusInAndCreatedAtBetween(
+                userId, limitedTypes, countedStatuses, startOfDay, startOfNextDay
+        );
+        if (zeroIfNull(dailyTotal).add(amount).compareTo(maxDaily) > 0) {
+            throw new AuthException(
+                    Constant.MESSAGE_NEW_ACCOUNT_DAILY_LIMIT_EXCEEDED,
+                    Constant.ERROR_NEW_ACCOUNT_DAILY_LIMIT_EXCEEDED
+            );
+        }
     }
 
     private WalletTransactionEntity buildWalletTransferTransaction(
@@ -876,6 +940,7 @@ public class WalletBankServiceImpl implements WalletBankService {
                 .availableBalance(wallet.getAvailableBalance())
                 .holdBalance(wallet.getHoldBalance())
                 .status(wallet.getStatus())
+                .limitation(wallet.getLimitation())
                 .build();
     }
 

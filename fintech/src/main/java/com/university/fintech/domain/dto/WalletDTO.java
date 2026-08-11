@@ -29,6 +29,8 @@ public class WalletDTO {
 
     private String status;
 
+    private Integer limitation;
+
     private OffsetDateTime createdAt;
 
     private String createdBy;
