@@ -1,10 +1,13 @@
 package com.university.fintech.infrastructure.primary.restful.wallet;
 
+import com.university.fintech.domain.port.primary.FaceIdService;
 import com.university.fintech.domain.port.primary.WalletBankService;
 import com.university.fintech.domain.port.primary.WalletPinService;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.ConfirmCreatePinRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.CreatePinRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.LinkBankAccountRequest;
+import com.university.fintech.infrastructure.primary.restful.request.wallet.RegisterEkycRequest;
+import com.university.fintech.infrastructure.primary.restful.request.wallet.VerifyFaceIdRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletBankTransferRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletQrDecodeRequest;
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletRecipientLookupRequest;
@@ -12,6 +15,7 @@ import com.university.fintech.infrastructure.primary.restful.request.wallet.Wall
 import com.university.fintech.infrastructure.primary.restful.request.wallet.WalletTransferRequest;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.BankResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.LinkedBankAccountResponse;
+import com.university.fintech.infrastructure.primary.restful.response.wallet.VerifyFaceIdResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletQrDecodeResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletQrResponse;
 import com.university.fintech.infrastructure.primary.restful.response.wallet.WalletRecipientLookupResponse;
@@ -44,6 +48,7 @@ public class WalletOperator {
 
     private final WalletBankService walletBankService;
     private final WalletPinService walletPinService;
+    private final FaceIdService faceIdService;
 
     @GetMapping
     public WalletResponse getWallet(Authentication authentication) {
@@ -236,5 +241,51 @@ public class WalletOperator {
     private UUID extractUserId(Authentication authentication) {
         Map<String, String> principal = (Map<String, String>) authentication.getPrincipal();
         return UUID.fromString(principal.get("userId"));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // FaceID / eKYC Endpoints
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Đăng ký eKYC sinh trắc học 5 góc mặt (theo chuẩn QĐ 2345/QĐ-NHNN).
+     * Bắt buộc hoàn tất trước khi thực hiện giao dịch ≥ 10,000,000 VNĐ.
+     *
+     * <p>Client cần chụp đủ 5 góc mặt theo thứ tự:
+     * quay trái 30-45°, quay phải 30-45°, cúi 20-30°, ngửa 20-30°, nhìn thẳng.
+     */
+    @PostMapping("/faceid/register-ekyc")
+    public Map<String, String> registerEkyc(
+            Authentication authentication,
+            @Valid @RequestBody RegisterEkycRequest request
+    ) {
+        UUID userId = extractUserId(authentication);
+        faceIdService.registerEkyc(userId, request.getImages());
+        walletBankService.markEkycVerified(userId);
+        return Map.of("message", Constant.MESSAGE_FACEID_EKYC_SUCCESS);
+    }
+
+    /**
+     * Xác thực khuôn mặt 2 trạm để lấy FaceID token dùng cho giao dịch ≥ 10M VNĐ.
+     *
+     * <p>Token có hiệu lực <b>5 phút</b> và chỉ dùng được <b>một lần</b>.
+     * Client gửi token qua field {@code faceIdToken} trong request giao dịch.
+     */
+    @PostMapping("/faceid/verify")
+    public VerifyFaceIdResponse verifyFaceId(
+            Authentication authentication,
+            @Valid @RequestBody VerifyFaceIdRequest request
+    ) {
+        UUID userId = extractUserId(authentication);
+        String token = faceIdService.verifyAndIssueToken(
+                userId,
+                request.getImages(),
+                request.isActiveLivenessPassed()
+        );
+        return VerifyFaceIdResponse.builder()
+                .faceIdToken(token)
+                .expiresInSeconds(Constant.FACEID_TOKEN_TTL_SECONDS)
+                .message(Constant.MESSAGE_FACEID_VERIFY_SUCCESS)
+                .build();
     }
 }

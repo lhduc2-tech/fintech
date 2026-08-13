@@ -94,5 +94,12 @@ public interface WalletBankService {
      * Dùng để tự động điền form chuyển tiền sau khi quét QR.
      */
     WalletQrDecodeResponse decodeWalletQr(WalletQrDecodeRequest request);
-}
 
+    /**
+     * Đánh dấu user đã hoàn tất eKYC sinh trắc học.
+     * Được gọi sau khi FaceID Python server đăng ký thành công.
+     *
+     * @param userId ID của user vừa hoàn tất eKYC
+     */
+    void markEkycVerified(UUID userId);
+}

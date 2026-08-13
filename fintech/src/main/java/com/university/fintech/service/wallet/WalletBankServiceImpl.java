@@ -20,6 +20,7 @@ import com.university.fintech.domain.mapper.LinkedBankAccountMapper;
 import com.university.fintech.domain.mapper.WalletMapper;
 import com.university.fintech.domain.mapper.WalletTransactionMapper;
 import com.university.fintech.domain.port.primary.AuthMailService;
+import com.university.fintech.domain.port.primary.FaceIdService;
 import com.university.fintech.domain.port.primary.TransactionOtpService;
 import com.university.fintech.domain.port.primary.WalletNotificationMailService;
 import com.university.fintech.domain.port.primary.WalletBankService;
@@ -51,6 +52,7 @@ import com.university.fintech.infrastructure.secondary.jpa.repository.WalletRepo
 import com.university.fintech.infrastructure.secondary.jpa.repository.WalletTransactionRepository;
 import com.university.fintech.infrastructure.primary.restful.security.ClientSecurityContext;
 import com.university.fintech.shared.constant.Constant;
+import com.university.fintech.wire.FaceIdConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -99,6 +101,8 @@ public class WalletBankServiceImpl implements WalletBankService {
     private final TransactionOtpService transactionOtpService;
     private final AuthMailService authMailService;
     private final ObjectMapper objectMapper;
+    private final FaceIdService faceIdService;
+    private final FaceIdConfig faceIdConfig;
 
     @Override
     @Transactional(readOnly = true)
@@ -189,7 +193,7 @@ public class WalletBankServiceImpl implements WalletBankService {
     @Override
     @Transactional
     public WalletTransactionResponse topUpFromBank(UUID userId, WalletBankTransferRequest request, ClientSecurityContext clientContext) {
-        verifyTransactionAuth(userId, request.getPin(), request.getOtpCode());
+        verifyTransactionAuth(userId, request.getPin(), request.getOtpCode(), request.getFaceIdToken(), request.getAmount());
         try {
             return executeTransfer(
                     userId,
@@ -206,7 +210,7 @@ public class WalletBankServiceImpl implements WalletBankService {
     @Override
     @Transactional
     public WalletTransactionResponse withdrawToBank(UUID userId, WalletBankTransferRequest request, ClientSecurityContext clientContext) {
-        verifyTransactionAuth(userId, request.getPin(), request.getOtpCode());
+        verifyTransactionAuth(userId, request.getPin(), request.getOtpCode(), request.getFaceIdToken(), request.getAmount());
         try {
             return executeTransfer(
                     userId,
@@ -223,7 +227,7 @@ public class WalletBankServiceImpl implements WalletBankService {
     @Override
     @Transactional
     public WalletTransactionResponse transferToWallet(UUID userId, WalletTransferRequest request, ClientSecurityContext clientContext) {
-        verifyTransactionAuth(userId, request.getPin(), request.getOtpCode());
+        verifyTransactionAuth(userId, request.getPin(), request.getOtpCode(), request.getFaceIdToken(), request.getAmount());
         try {
             String idempotencyKey = request.getIdempotencyKey().trim();
             var existingTransaction = walletTransactionRepository.findByIdempotencyKey(idempotencyKey);
@@ -641,7 +645,46 @@ public class WalletBankServiceImpl implements WalletBankService {
         return walletPinService.hasPin(userId);
     }
 
-    private void verifyTransactionAuth(UUID userId, String pin, String otpCode) {
+    /**
+     * Xác thực giao dịch 2 lớp (PIN/OTP) và — với giao dịch cao ≥ 10M VNĐ — FaceID bắt buộc.
+     *
+     * <p>Logic theo chuẩn QD 2345/QD-NHNN:
+     * <ul>
+     *   <li>Amount &lt; threshold: chỉ cần PIN hoặc OTP (giữ nguyên logic cũ).</li>
+     *   <li>Amount &ge; threshold (10M VNĐ): bắt buộc cả FaceID token HỢP LỆ + PIN/OTP (2 lớp).</li>
+     * </ul>
+     *
+     * @param userId      ID của user thực hiện giao dịch
+     * @param pin         Mã PIN 6 chữ số (null nếu dùng OTP)
+     * @param otpCode     Mã OTP (null nếu dùng PIN)
+     * @param faceIdToken Token từ {@code POST /wallet/faceid/verify} (null cho giao dịch thường)
+     * @param amount      Số tiền giao dịch, dùng để xác định có cần FaceID không
+     */
+    private void verifyTransactionAuth(UUID userId, String pin, String otpCode, String faceIdToken, java.math.BigDecimal amount) {
+        BigDecimal threshold = faceIdConfig.getHighValueThreshold();
+        boolean isHighValue = amount != null && amount.compareTo(threshold) >= 0;
+
+        if (isHighValue) {
+            // — Kiểm tra eKYC: user phải đã đăng ký sinh trắc học trước —
+            UserEntity user = userRepository.findById(userId)
+                    .orElseThrow(() -> new AuthException(Constant.MESSAGE_USER_NOT_FOUND, Constant.ERROR_USER_NOT_FOUND));
+            if (!Constant.EKYC_STATUS_VERIFIED.equals(user.getEkycStatus())) {
+                throw new AuthException(Constant.MESSAGE_FACEID_NOT_REGISTERED, Constant.ERROR_FACEID_NOT_REGISTERED);
+            }
+
+            // — Lớp 1: Kiểm tra FaceID token —
+            if (faceIdToken == null || faceIdToken.isBlank()) {
+                throw new AuthException(Constant.MESSAGE_FACEID_REQUIRED, Constant.ERROR_FACEID_REQUIRED);
+            }
+            if (!faceIdService.isTokenValid(userId, faceIdToken)) {
+                throw new AuthException(Constant.MESSAGE_FACEID_TOKEN_INVALID, Constant.ERROR_FACEID_TOKEN_INVALID);
+            }
+            // Consume token ngay (one-time use) trước khi check PIN/OTP
+            faceIdService.consumeToken(userId, faceIdToken);
+            log.info("[FaceID] Giao dịch cao ({} VNĐ) — FaceID token hợp lệ cho user {}", amount, userId);
+        }
+
+        // — Lớp 2 (bắt buộc cho mọi giao dịch): PIN hoặc OTP —
         boolean hasPinProvided = pin != null && !pin.isBlank();
         boolean hasOtpProvided = otpCode != null && !otpCode.isBlank();
 
@@ -1155,6 +1198,21 @@ public class WalletBankServiceImpl implements WalletBankService {
                 .velocity24hAmount(vAmount)
                 .fanIn24hCount((int) fanIn)
                 .fanOut24hCount((int) fanOut);
+    }
+
+    // -------------------------------------------------------------------------
+    // eKYC Status Management
+    // -------------------------------------------------------------------------
+
+    @Override
+    @Transactional
+    public void markEkycVerified(UUID userId) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new AuthException(Constant.MESSAGE_USER_NOT_FOUND, Constant.ERROR_USER_NOT_FOUND));
+        user.setEkycStatus(Constant.EKYC_STATUS_VERIFIED);
+        user.setEkycRegisteredAt(java.time.OffsetDateTime.now());
+        userRepository.save(user);
+        log.info("[eKYC] User {} đã hoàn tất đăng ký eKYC sinh trắc học.", userId);
     }
 
 }
