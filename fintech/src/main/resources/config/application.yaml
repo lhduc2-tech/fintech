@@ -159,6 +159,14 @@ application:
     tx-otp-ttl-seconds: ${WALLET_TX_OTP_TTL_SECONDS:300}
     # Số lần nhập PIN sai tối đa trước khi bị khóa (mặc định: 5 lần)
     pin-max-failed-attempts: ${WALLET_PIN_MAX_FAILED_ATTEMPTS:5}
+  faceid:
+    # URL của FaceID Python server (nội bộ Docker network)
+    server-url: ${FACEID_SERVER_URL:http://localhost:5001}
+    # Ngưỡng giá trị giao dịch bắt buộc FaceID (VNĐ) — chuẩn QĐ 2345/QĐ-NHNN
+    high-value-threshold: ${FACEID_HIGH_VALUE_THRESHOLD:10000000}
+    # Tắt/mở FaceID (dùng khi test local không có Python server)
+    enabled: ${FACEID_ENABLED:true}
+
 
 server:
   port: 8082
@@ -169,3 +177,4 @@ proxy:
   enable: false
   host: localhost
   port: 8082
+

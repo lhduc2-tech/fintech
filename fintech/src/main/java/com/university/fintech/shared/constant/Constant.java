@@ -233,4 +233,24 @@ public class Constant {
     public static final String MESSAGE_QR_INVALID = "Ma QR khong hop le. Vui long thu lai.";
     public static final String ERROR_QR_GENERATE_FAILED = "QR_GENERATE_FAILED";
     public static final String MESSAGE_QR_GENERATE_FAILED = "Khong the tao ma QR. Vui long thu lai sau.";
+
+    // FaceID / eKYC
+    public static final String FACEID_TOKEN_REDIS_PREFIX = "wallet:faceid-token:";
+    public static final long FACEID_TOKEN_TTL_SECONDS = 300L; // 5 phut
+    public static final String EKYC_STATUS_VERIFIED = "VERIFIED";
+    public static final String EKYC_STATUS_PENDING = "PENDING";
+    public static final String ERROR_FACEID_REQUIRED = "FACEID_REQUIRED";
+    public static final String ERROR_FACEID_NOT_REGISTERED = "FACEID_NOT_REGISTERED";
+    public static final String ERROR_FACEID_VERIFICATION_FAILED = "FACEID_VERIFICATION_FAILED";
+    public static final String ERROR_FACEID_SERVICE_UNAVAILABLE = "FACEID_SERVICE_UNAVAILABLE";
+    public static final String ERROR_FACEID_TOKEN_INVALID = "FACEID_TOKEN_INVALID";
+    public static final String MESSAGE_FACEID_REQUIRED = "Giao dich nay yeu cau xac thuc FaceID. Vui long xac thuc khuon mat truoc.";
+    public static final String MESSAGE_FACEID_NOT_REGISTERED = "Ban chua dang ky sinh trac hoc (eKYC). Vui long hoan tat eKYC truoc khi thuc hien giao dich cao.";
+    public static final String MESSAGE_FACEID_VERIFICATION_FAILED = "Xac thuc FaceID that bai. Khuon mat khong khop hoac bi phat hien gia mao.";
+    public static final String MESSAGE_FACEID_SERVICE_UNAVAILABLE = "He thong xac thuc FaceID tam thoi khong kha dung. Vui long thu lai sau.";
+    public static final String MESSAGE_FACEID_TOKEN_INVALID = "Ma xac thuc FaceID khong hop le hoac da het han (5 phut). Vui long xac thuc lai.";
+    public static final String MESSAGE_FACEID_EKYC_SUCCESS = "Dang ky eKYC thanh cong. Ban co the thuc hien giao dich cao.";
+    public static final String MESSAGE_FACEID_VERIFY_SUCCESS = "Xac thuc FaceID thanh cong.";
+    // Nguong gia tri giao dich bat buoc FaceID (10,000,000 VND) — chuẩn QĐ 2345/QĐ-NHNN
+    public static final String FACEID_HIGH_VALUE_THRESHOLD = "10000000";
 }

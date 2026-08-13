@@ -37,4 +37,11 @@ public class WalletBankTransferRequest {
     /** Mã OTP qua email — bắt buộc nếu user chưa tạo PIN. */
     @Size(min = 6, max = 6)
     private String otpCode;
+
+    /**
+     * FaceID token (UUID, TTL 5 phút) — bắt buộc khi {@code amount} ≥ 10,000,000 VNĐ.
+     * Lấy từ {@code POST /wallet/faceid/verify} trước khi gọi API này.
+     * Token chỉ dùng được <b>một lần</b>.
+     */
+    private String faceIdToken;
 }

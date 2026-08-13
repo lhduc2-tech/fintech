@@ -64,6 +64,17 @@ public class UserEntity extends BaseAuditing {
     @Column(name = "pin_failed_attempts")
     private Integer pinFailedAttempts = 0;
 
+    /**
+     * Trạng thái eKYC sinh trắc học:
+     * {@code null} = chưa đăng ký, {@code "PENDING"} = đang xử lý, {@code "VERIFIED"} = đã xác minh.
+     */
+    @Column(name = "ekyc_status")
+    private String ekycStatus;
+
+    /** Thời điểm hoàn tất đăng ký eKYC sinh trắc học thành công. */
+    @Column(name = "ekyc_registered_at")
+    private OffsetDateTime ekycRegisteredAt;
+
     @Builder.Default
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
