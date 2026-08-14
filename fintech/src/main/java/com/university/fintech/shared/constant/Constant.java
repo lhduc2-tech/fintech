@@ -217,9 +217,8 @@ public class Constant {
     public static final String WALLET_TRANSACTION_MAX_AMOUNT_PER_TRANSACTION = "50000000";
     public static final String WALLET_TRANSACTION_DAILY_LIMIT = "100000000";
     // Giới hạn giao dịch tháng theo cấp hạn mức ví (limitation)
-    public static final String WALLET_LIMITATION_LEVEL_1_MONTHLY_LIMIT = "100000000"; // Phổ thông
-    public static final String WALLET_LIMITATION_LEVEL_2_MONTHLY_LIMIT = "500000000"; // Trung cấp
-    public static final String WALLET_LIMITATION_LEVEL_3_MONTHLY_LIMIT = "900000000"; // Cao cấp
+    public static final String WALLET_LIMITATION_LEVEL_1_MONTHLY_LIMIT = "100000000"; // Phổ thông (100 triệu / tháng)
+    public static final String WALLET_LIMITATION_LEVEL_2_MONTHLY_LIMIT = "300000000"; // Cao cấp (300 triệu / tháng)
     public static final int WALLET_LIMITATION_DEFAULT = 1;
     // Giới hạn tài khoản mới (trong 24h đầu tiên kể từ khi đăng ký)
     public static final long NEW_ACCOUNT_RESTRICTION_HOURS = 24;

@@ -798,6 +798,14 @@ public class WalletBankServiceImpl implements WalletBankService {
     }
 
     private void ensureWalletTransactionLimit(UUID userId, WalletEntity wallet, BigDecimal amount) {
+        BigDecimal maxPerTx = new BigDecimal(Constant.WALLET_TRANSACTION_MAX_AMOUNT_PER_TRANSACTION);
+        if (amount.compareTo(maxPerTx) > 0) {
+            throw new AuthException(
+                    Constant.MESSAGE_WALLET_TRANSACTION_AMOUNT_MAX_PER_TRANSACTION,
+                    Constant.ERROR_WALLET_TRANSACTION_AMOUNT_LIMIT_EXCEEDED
+            );
+        }
+
         BigDecimal dailyLimit = new BigDecimal(Constant.WALLET_TRANSACTION_DAILY_LIMIT);
         BigDecimal monthlyLimit = resolveMonthlyLimit(wallet.getLimitation());
         ZoneId zoneId = ZoneId.systemDefault();
@@ -848,7 +856,6 @@ public class WalletBankServiceImpl implements WalletBankService {
     private BigDecimal resolveMonthlyLimit(Integer limitation) {
         return switch (limitation == null ? Constant.WALLET_LIMITATION_DEFAULT : limitation) {
             case 2 -> new BigDecimal(Constant.WALLET_LIMITATION_LEVEL_2_MONTHLY_LIMIT);
-            case 3 -> new BigDecimal(Constant.WALLET_LIMITATION_LEVEL_3_MONTHLY_LIMIT);
             default -> new BigDecimal(Constant.WALLET_LIMITATION_LEVEL_1_MONTHLY_LIMIT);
         };
     }
