@@ -50,6 +50,15 @@ services:
     networks:
       - fintech-network
 
+  faceid:
+    image: nigasante/faceid-service:latest
+    container_name: faceid-service
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    networks:
+      - fintech-network
+
   paymentgateway:
     image: nigasante/paymentgateway:latest
     container_name: paymentgateway
@@ -126,6 +135,7 @@ services:
       - fintech-service
       - paymentgateway
       - coreservice
+      - faceid
     networks:
       - fintech-network
 
