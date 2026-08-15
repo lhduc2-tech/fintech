@@ -28,8 +28,25 @@ services:
       S3_BUCKET_NAME: ${S3_BUCKET_NAME}
       SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME}
       SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD}
+      FRAUD_DETECTION_SERVER_URL: http://fraud-detection:5002
     volumes:
       - ./ca.pem:/app/certs/ca.pem:ro
+    networks:
+      - fintech-network
+
+  fraud-detection:
+    build:
+      context: ../fraud_detection
+      dockerfile: Dockerfile
+    container_name: fraud-detection
+    restart: unless-stopped
+    ports:
+      - "5002:5002"
+    environment:
+      PORT: 5002
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
     networks:
       - fintech-network
 

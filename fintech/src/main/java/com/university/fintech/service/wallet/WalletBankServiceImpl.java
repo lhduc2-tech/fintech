@@ -19,8 +19,10 @@ import com.university.fintech.domain.entity.WalletTransactionEntity;
 import com.university.fintech.domain.mapper.LinkedBankAccountMapper;
 import com.university.fintech.domain.mapper.WalletMapper;
 import com.university.fintech.domain.mapper.WalletTransactionMapper;
+import com.university.fintech.domain.dto.FraudDetectionPayload;
 import com.university.fintech.domain.port.primary.AuthMailService;
 import com.university.fintech.domain.port.primary.FaceIdService;
+import com.university.fintech.domain.port.primary.FraudDetectionService;
 import com.university.fintech.domain.port.primary.TransactionOtpService;
 import com.university.fintech.domain.port.primary.WalletNotificationMailService;
 import com.university.fintech.domain.port.primary.WalletBankService;
@@ -70,7 +72,6 @@ import jakarta.persistence.criteria.Predicate;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -103,6 +104,7 @@ public class WalletBankServiceImpl implements WalletBankService {
     private final ObjectMapper objectMapper;
     private final FaceIdService faceIdService;
     private final FaceIdConfig faceIdConfig;
+    private final FraudDetectionService fraudDetectionService;
 
     @Override
     @Transactional(readOnly = true)
@@ -319,7 +321,11 @@ public class WalletBankServiceImpl implements WalletBankService {
                     clientContext
             );
 
-            walletTransactionProcessor.process(requestBuilder.build());
+            WalletProcessingRequest processingRequest = requestBuilder.build();
+            walletTransactionProcessor.process(processingRequest);
+
+            // Gửi sang Fraud Detection song song (Async, Non-blocking, 0% ảnh hưởng luồng chính)
+            triggerFraudScreening(processingRequest, userId, senderWallet.getUser(), recipientWallet.getUser(), debitTransaction.getDescription());
 
             // Trả PENDING ngay — email sẽ gửi sau khi nhận kết quả từ PaymentGateway (SUCCESS / FAILED)
             return toWalletTransactionResponse(walletTransactionMapper.toDto(savedDebitTransaction));
@@ -562,7 +568,11 @@ public class WalletBankServiceImpl implements WalletBankService {
 
         enrichAntiFraudData(requestBuilder, userId, oldBal, newBal, senderId, senderAcc, clientContext);
 
-        walletTransactionProcessor.process(requestBuilder.build());
+        WalletProcessingRequest processingRequest = requestBuilder.build();
+        walletTransactionProcessor.process(processingRequest);
+
+        // Gửi sang Fraud Detection song song (Async, Non-blocking, 0% ảnh hưởng luồng chính)
+        triggerFraudScreening(processingRequest, userId, wallet.getUser(), null, transaction.getDescription());
 
         // Trả PENDING ngay — email sẽ gửi sau khi nhận kết quả từ PaymentGateway (SUCCESS / FAILED)
         return toWalletTransactionResponse(walletTransactionMapper.toDto(savedTransaction));
@@ -798,6 +808,14 @@ public class WalletBankServiceImpl implements WalletBankService {
     }
 
     private void ensureWalletTransactionLimit(UUID userId, WalletEntity wallet, BigDecimal amount) {
+        BigDecimal maxPerTx = new BigDecimal(Constant.WALLET_TRANSACTION_MAX_AMOUNT_PER_TRANSACTION);
+        if (amount.compareTo(maxPerTx) > 0) {
+            throw new AuthException(
+                    Constant.MESSAGE_WALLET_TRANSACTION_AMOUNT_MAX_PER_TRANSACTION,
+                    Constant.ERROR_WALLET_TRANSACTION_AMOUNT_LIMIT_EXCEEDED
+            );
+        }
+
         BigDecimal dailyLimit = new BigDecimal(Constant.WALLET_TRANSACTION_DAILY_LIMIT);
         BigDecimal monthlyLimit = resolveMonthlyLimit(wallet.getLimitation());
         ZoneId zoneId = ZoneId.systemDefault();
@@ -848,7 +866,6 @@ public class WalletBankServiceImpl implements WalletBankService {
     private BigDecimal resolveMonthlyLimit(Integer limitation) {
         return switch (limitation == null ? Constant.WALLET_LIMITATION_DEFAULT : limitation) {
             case 2 -> new BigDecimal(Constant.WALLET_LIMITATION_LEVEL_2_MONTHLY_LIMIT);
-            case 3 -> new BigDecimal(Constant.WALLET_LIMITATION_LEVEL_3_MONTHLY_LIMIT);
             default -> new BigDecimal(Constant.WALLET_LIMITATION_LEVEL_1_MONTHLY_LIMIT);
         };
     }
@@ -1198,6 +1215,50 @@ public class WalletBankServiceImpl implements WalletBankService {
                 .velocity24hAmount(vAmount)
                 .fanIn24hCount((int) fanIn)
                 .fanOut24hCount((int) fanOut);
+    }
+
+    private void triggerFraudScreening(
+            WalletProcessingRequest req,
+            UUID userId,
+            UserEntity user,
+            UserEntity recipient,
+            String description
+    ) {
+        try {
+            FraudDetectionPayload payload = FraudDetectionPayload.builder()
+                    .correlationId(UUID.randomUUID().toString())
+                    .referenceCode(req.getReferenceCode())
+                    .idempotencyKey(req.getIdempotencyKey())
+                    .transactionType(req.getTransactionType())
+                    .amount(req.getAmount())
+                    .timestamp(OffsetDateTime.now().toString())
+                    .userId(userId)
+                    .userEmail(user != null ? user.getEmail() : req.getUserEmail())
+                    .userFullName(user != null ? user.getFullName() : req.getUserFullName())
+                    .description(description)
+                    .bankCode(req.getBankCode())
+                    .accountNumber(req.getAccountNumber())
+                    .recipientFullName(recipient != null ? recipient.getFullName() : req.getRecipientFullName())
+                    .recipientPhoneNumber(recipient != null ? recipient.getPhoneNumber() : req.getRecipientPhoneNumber())
+                    .senderUserId(req.getSenderUserId())
+                    .senderAccountNumber(req.getSenderAccountNumber())
+                    .oldBalance(req.getOldBalance())
+                    .newBalance(req.getNewBalance())
+                    .deviceId(req.getDeviceId())
+                    .deviceFingerprint(req.getDeviceFingerprint())
+                    .clientIp(req.getClientIp())
+                    .geoLocation(req.getGeoLocation())
+                    .velocity24hCount(req.getVelocity24hCount())
+                    .velocity24hAmount(req.getVelocity24hAmount())
+                    .fanIn24hCount(req.getFanIn24hCount())
+                    .fanOut24hCount(req.getFanOut24hCount())
+                    .build();
+
+            fraudDetectionService.screenTransactionAsync(payload);
+        } catch (Exception e) {
+            log.warn("[FraudDetection] Could not dispatch fraud screening for referenceCode={}: {}",
+                    req.getReferenceCode(), e.getMessage());
+        }
     }
 
     // -------------------------------------------------------------------------

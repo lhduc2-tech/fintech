@@ -166,6 +166,13 @@ application:
     high-value-threshold: ${FACEID_HIGH_VALUE_THRESHOLD:10000000}
     # Tắt/mở FaceID (dùng khi test local không có Python server)
     enabled: ${FACEID_ENABLED:true}
+  fraud-detection:
+    # URL của Fraud Detection Python server (cổng 5002)
+    server-url: ${FRAUD_DETECTION_SERVER_URL:http://localhost:5002}
+    # Bật/tắt gọi Fraud Detection
+    enabled: ${FRAUD_DETECTION_ENABLED:true}
+    # Timeout gọi sàng lọc gian lận (giây)
+    timeout-seconds: ${FRAUD_DETECTION_TIMEOUT_SECONDS:5}
 
 
 server:
