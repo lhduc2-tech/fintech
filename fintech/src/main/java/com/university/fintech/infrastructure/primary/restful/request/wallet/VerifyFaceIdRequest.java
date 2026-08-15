@@ -33,4 +33,17 @@ public class VerifyFaceIdRequest {
      * (xoay mặt ≥ 7° hoặc chớp mắt) — tăng độ tin cậy chống deepfake.
      */
     private boolean activeLivenessPassed = false;
+
+    /** Mã định danh correlationId (nếu client tạo trước, nếu không server tự sinh). */
+    private String correlationId;
+
+    /** Mã tham chiếu giao dịch Fintech (nếu có). */
+    private String referenceCode;
+
+    /** Số tiền giao dịch cần duyệt FaceID (≥ 10,000,000 VNĐ). */
+    private java.math.BigDecimal amount;
+
+    /** Loại giao dịch: TRANSFER, TOPUP, CASHOUT, WALLET_TO_BANK... */
+    private String transactionType;
 }
+

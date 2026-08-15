@@ -280,7 +280,11 @@ public class WalletOperator {
         String token = faceIdService.verifyAndIssueToken(
                 userId,
                 request.getImages(),
-                request.isActiveLivenessPassed()
+                request.isActiveLivenessPassed(),
+                request.getCorrelationId(),
+                request.getReferenceCode(),
+                request.getAmount(),
+                request.getTransactionType()
         );
         return VerifyFaceIdResponse.builder()
                 .faceIdToken(token)
