@@ -1,0 +1,12 @@
+Flask>=3.0.0
+easydict
+numpy
+tqdm
+torch
+torchvision
+opencv-python-headless
+Pillow
+tensorboardX
+insightface
+onnxruntime
+cloudinary
