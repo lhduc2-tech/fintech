@@ -22,16 +22,35 @@ public interface FaceIdService {
     void registerEkyc(UUID userId, List<String> imagesBase64);
 
     /**
-     * Xác thực khuôn mặt 2 trạm (Anti-Spoofing + Cosine Match 512D).
+     * Xác thực khuôn mặt 2 trạm (Anti-Spoofing + Cosine Match 512D) và ghi log kiểm tra vào faceid_verification_logs.
      * Nếu thành công, tạo short-lived FaceID token (TTL 5 phút) lưu vào Redis.
      *
      * @param userId               ID của user cần xác thực
      * @param imagesBase64         Danh sách ảnh camera (≥ 2 frames để chống deepfake)
      * @param activeLivenessPassed {@code true} nếu client đã hoàn tất liveness check chủ động (xoay mặt)
+     * @param correlationId        Mã định danh luồng giao dịch
+     * @param referenceCode        Mã tham chiếu giao dịch Fintech
+     * @param amount               Số tiền giao dịch (≥ 10,000,000 VNĐ)
+     * @param transactionType      Loại giao dịch: TRANSFER, TOPUP, CASHOUT...
      * @return Chuỗi FaceID token (UUID), client cần gửi kèm request giao dịch
      * @throws com.university.fintech.exception.domain.AuthException nếu xác thực thất bại hoặc server lỗi
      */
-    String verifyAndIssueToken(UUID userId, List<String> imagesBase64, boolean activeLivenessPassed);
+    String verifyAndIssueToken(
+            UUID userId,
+            List<String> imagesBase64,
+            boolean activeLivenessPassed,
+            String correlationId,
+            String referenceCode,
+            java.math.BigDecimal amount,
+            String transactionType
+    );
+
+    /**
+     * Overload tiện ích cho verifyAndIssueToken khi không truyền thông tin chi tiết giao dịch.
+     */
+    default String verifyAndIssueToken(UUID userId, List<String> imagesBase64, boolean activeLivenessPassed) {
+        return verifyAndIssueToken(userId, imagesBase64, activeLivenessPassed, null, null, null, null);
+    }
 
     /**
      * Kiểm tra FaceID token còn hiệu lực không (Redis lookup).
