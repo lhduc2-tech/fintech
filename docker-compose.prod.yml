@@ -34,21 +34,7 @@ services:
     networks:
       - fintech-network
 
-  fraud-detection:
-    build:
-      context: ../fraud_detection
-      dockerfile: Dockerfile
-    container_name: fraud-detection
-    restart: unless-stopped
-    ports:
-      - "5002:5002"
-    environment:
-      PORT: 5002
-      DB_URL: ${DB_URL}
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
-    networks:
-      - fintech-network
+
 
   faceid:
     image: nigasante/faceid-service:latest
