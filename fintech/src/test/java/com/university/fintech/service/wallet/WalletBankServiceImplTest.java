@@ -76,6 +76,20 @@ class WalletBankServiceImplTest {
     private LinkedBankAccountMapper linkedBankAccountMapper;
     @Mock
     private WalletTransactionMapper walletTransactionMapper;
+    @Mock
+    private com.university.fintech.domain.port.primary.WalletPinService walletPinService;
+    @Mock
+    private com.university.fintech.domain.port.primary.TransactionOtpService transactionOtpService;
+    @Mock
+    private com.university.fintech.domain.port.primary.AuthMailService authMailService;
+    @Mock
+    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    @Mock
+    private com.university.fintech.domain.port.primary.FaceIdService faceIdService;
+    @Mock
+    private com.university.fintech.wire.FaceIdConfig faceIdConfig;
+    @Mock
+    private com.university.fintech.domain.port.primary.FraudDetectionService fraudDetectionService;
 
     @InjectMocks
     private WalletBankServiceImpl walletBankService;
@@ -96,6 +110,10 @@ class WalletBankServiceImplTest {
                 .bank(bank)
                 .status(Constant.STATUS_ACTIVE)
                 .build();
+
+        lenient().when(faceIdConfig.getHighValueThreshold()).thenReturn(new BigDecimal("10000000"));
+        lenient().when(walletPinService.hasPin(any())).thenReturn(true);
+        lenient().when(walletPinService.verifyPin(any(), any())).thenReturn(true);
 
         lenient().when(walletTransactionMapper.toEntity(any(WalletTransactionDTO.class)))
                 .thenAnswer(invocation -> transactionFromDto(invocation.getArgument(0)));
@@ -296,7 +314,8 @@ class WalletBankServiceImplTest {
         when(walletRepository.findByUserIdForUpdate(USER_ID)).thenReturn(Optional.of(wallet));
         when(linkedBankAccountRepository.findByIdAndUserIdForUpdate(LINKED_BANK_ACCOUNT_ID, USER_ID))
                 .thenReturn(Optional.of(bankAccount));
-        when(bankRepository.findByIdForUpdate(BANK_ID)).thenReturn(Optional.of(bank));
+        when(bankRepository.findById(BANK_ID)).thenReturn(Optional.of(bank));
+        lenient().when(bankRepository.findByIdForUpdate(BANK_ID)).thenReturn(Optional.of(bank));
         when(userRepository.getReferenceById(USER_ID)).thenReturn(user);
         when(walletTransactionProcessor.process(any())).thenReturn(processorResult(processorStatus));
     }
@@ -316,6 +335,7 @@ class WalletBankServiceImplTest {
         request.setLinkedBankAccountId(LINKED_BANK_ACCOUNT_ID);
         request.setAmount(new BigDecimal("25.00"));
         request.setIdempotencyKey(key);
+        request.setPin("123456");
         return request;
     }
 
@@ -324,6 +344,7 @@ class WalletBankServiceImplTest {
         request.setRecipientPhoneNumber("0900000002");
         request.setAmount(new BigDecimal("25.00"));
         request.setIdempotencyKey(key);
+        request.setPin("123456");
         return request;
     }
 
