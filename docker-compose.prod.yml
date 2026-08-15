@@ -28,7 +28,6 @@ services:
       S3_BUCKET_NAME: ${S3_BUCKET_NAME}
       SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME}
       SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD}
-      FRAUD_DETECTION_SERVER_URL: http://fraud-detection:5002
     volumes:
       - ./ca.pem:/app/certs/ca.pem:ro
     networks:
