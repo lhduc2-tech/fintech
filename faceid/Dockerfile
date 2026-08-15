@@ -22,8 +22,9 @@ RUN python download_models.py || true
 # Copy full application code
 COPY . .
 
-EXPOSE 5000
+EXPOSE 5001
 
 ENV PYTHONUNBUFFERED=1
+ENV PORT=5001
 
 CMD ["python", "app_server.py"]

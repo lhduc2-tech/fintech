@@ -40,7 +40,9 @@ services:
     container_name: faceid-service
     restart: unless-stopped
     ports:
-      - "5000:5000"
+      - "5001:5001"
+    environment:
+      - PORT=5001
     networks:
       - fintech-network
 
