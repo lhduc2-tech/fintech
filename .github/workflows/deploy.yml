@@ -69,14 +69,25 @@ jobs:
       - name: Checkout code (to get configs)
         uses: actions/checkout@v4
 
-      - name: Copy configs (docker-compose, nginx, prometheus) to EC2
+      - name: Copy docker-compose to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "docker-compose.prod.yml,nginx/nginx.conf,prometheus/prometheus.yml"
-          target: "~/"
+          source: "docker-compose.prod.yml"
+          target: "/home/ubuntu/"
+          strip_components: 0
+
+      - name: Copy nginx and prometheus configs to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "nginx/nginx.conf,prometheus/prometheus.yml"
+          target: "/home/ubuntu/"
+          strip_components: 0
 
       - name: SSH into EC2 & pull latest images & restart
         uses: appleboy/ssh-action@v1.0.3
