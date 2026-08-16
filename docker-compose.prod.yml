@@ -33,11 +33,6 @@ services:
     networks:
       - fintech-network
 
-
-
-
-
-
   paymentgateway:
     image: nigasante/paymentgateway:latest
     container_name: paymentgateway
@@ -101,6 +96,16 @@ services:
     networks:
       - fintech-network
 
+  # ─── FACE ID SERVICE (FLASK - PORT 5000) ───────────────────────────────────
+  faceid-service:
+    image: nigasante/faceid-service:latest
+    container_name: faceid-service
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    networks:
+      - fintech-network
+
   # ─── REVERSE PROXY ────────────────────────────────────────────────────────
   nginx:
     image: nginx:alpine
@@ -114,6 +119,7 @@ services:
       - fintech-service
       - paymentgateway
       - coreservice
+      - faceid-service
     networks:
       - fintech-network
 
