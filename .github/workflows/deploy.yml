@@ -53,12 +53,7 @@ jobs:
           push: true
           tags: ${{ env.DOCKERHUB_USERNAME }}/notificationservice:latest
 
-      - name: Build & Push faceid-service
-        uses: docker/build-push-action@v5
-        with:
-          context: ./faceid
-          push: true
-          tags: ${{ env.DOCKERHUB_USERNAME }}/faceid-service:latest
+
 
   deploy-ec2:
     name: 2. Deploy to AWS EC2

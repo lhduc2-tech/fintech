@@ -35,24 +35,8 @@ services:
 
 
 
-  faceid:
-    image: nigasante/faceid-service:latest
-    container_name: faceid-service
-    restart: unless-stopped
-    ports:
-      - "5001:5000"
-    environment:
-      - PORT=5000
-      - DB_URL=${DB_URL}
-      - DB_USERNAME=${DB_USERNAME}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
-      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
-      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
-      - FACE_MATCH_THRESHOLD=0.40
-      - LIVENESS_THRESHOLD=0.50
-    networks:
-      - fintech-network
+
+
 
   paymentgateway:
     image: nigasante/paymentgateway:latest
