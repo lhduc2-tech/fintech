@@ -133,7 +133,6 @@ services:
       - fintech-service
       - paymentgateway
       - coreservice
-      - faceid
     networks:
       - fintech-network
 
