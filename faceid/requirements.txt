@@ -10,3 +10,4 @@ tensorboardX
 insightface
 onnxruntime
 cloudinary
+psycopg2-binary
