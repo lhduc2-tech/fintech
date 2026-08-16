@@ -131,14 +131,20 @@ def api_verify_faceid():
                 'success': False,
                 'status': 'REJECTED',
                 'user_id': user_id,
+                'liveness_score': '0.0000 (SPOOF / FAILED)',
+                'cosine_score': f'{cosine_score:.4f}',
                 'message': 'Từ chối giao dịch: ID Ví chưa đăng ký hoặc mặt không khớp'
             })
+
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5001))
+    host = os.getenv('SERVER_HOST', '0.0.0.0')
+    port = int(os.getenv('SERVER_PORT', 5000))
+    debug = os.getenv('DEBUG', 'false').lower() == 'true'
     print("="*60)
-    print(f"🚀 KHỞI CHẠY MOBILE eKYC & FACEID SERVER TẠI: http://0.0.0.0:{port}")
+    print(f"🚀 KHỞI CHẠY MOBILE eKYC & FACEID SERVER TẠI: http://{host}:{port}")
     print("="*60)
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host=host, port=port, debug=debug)
+
