@@ -98,30 +98,21 @@ services:
     networks:
       - fintech-network
 
-  # ─── FACE ID SERVICE (FLASK - PORT 5000) ───────────────────────────────────
-  faceid-service:
-    image: nigasante/faceid-service:latest
-    container_name: faceid-service
-    restart: unless-stopped
-    ports:
-      - "5001:5001"
-    networks:
-      - fintech-network
-
-  # ─── REVERSE PROXY ────────────────────────────────────────────────────────
+  # ─── REVERSE PROXY & SSL GATEWAY (HTTPS) ──────────────────────────────────
   nginx:
     image: nginx:alpine
     container_name: nginx
     restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - fintech-service
       - paymentgateway
       - coreservice
-      - faceid-service
     networks:
       - fintech-network
 
