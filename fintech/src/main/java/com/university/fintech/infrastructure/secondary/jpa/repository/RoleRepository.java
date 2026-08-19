@@ -10,4 +10,6 @@ import java.util.UUID;
 public interface RoleRepository extends BaseJPARepository<RoleEntity, UUID> {
 
     Optional<RoleEntity> findByCode(String code);
+
+    java.util.List<RoleEntity> findByCodeIn(java.util.Collection<String> codes);
 }

@@ -14,12 +14,16 @@ public class Constant {
     public static final String STATUS_UNLINKED = "UNLINKED";
     public static final String STATUS_PENDING_EMAIL_VERIFICATION = "PENDING_EMAIL_VERIFICATION";
     public static final String STATUS_LOCKED = "LOCKED";
+    public static final String STATUS_SUSPENDED = "SUSPENDED";
+    public static final String STATUS_INACTIVE = "INACTIVE";
+    public static final String STATUS_DELETED = "DELETED";
     public static final String STATUS_PENDING = "PENDING";
     public static final String STATUS_SUCCESS = "SUCCESS";
     public static final String STATUS_FAILED = "FAILED";
     public static final String STATUS_TIMED_OUT = "TIMED_OUT";
 
     public static final String DEFAULT_ROLE_CODE = "USER";
+    public static final String ROLE_ADMIN = "ADMIN";
 
     public static final String TOKEN_TYPE_BEARER = "Bearer";
 
@@ -144,9 +148,14 @@ public class Constant {
     public static final String ERROR_PIN_ALREADY_EXISTS = "PIN_ALREADY_EXISTS";
     public static final String ERROR_TRANSACTION_OTP_REQUIRED = "TRANSACTION_OTP_REQUIRED";
     public static final String ERROR_INVALID_TRANSACTION_OTP = "INVALID_TRANSACTION_OTP";
+    public static final String ERROR_ROLE_NOT_FOUND = "ROLE_NOT_FOUND";
+    public static final String ERROR_INVALID_USER_STATUS = "INVALID_USER_STATUS";
+    public static final String ERROR_CANNOT_DELETE_ADMIN = "CANNOT_DELETE_ADMIN";
+    public static final String ERROR_IDENTITY_NUMBER_ALREADY_EXISTS = "IDENTITY_NUMBER_ALREADY_EXISTS";
 
     public static final String MESSAGE_EMAIL_ALREADY_EXISTS = "Email nay da duoc dang ky. Vui long dung email khac hoac dang nhap.";
     public static final String MESSAGE_PHONE_NUMBER_ALREADY_EXISTS = "So dien thoai nay da duoc dang ky. Vui long thu so khac hoac dang nhap.";
+    public static final String MESSAGE_IDENTITY_NUMBER_ALREADY_EXISTS = "So CCCD/CMND nay da duoc su dung boi mot tai khoan khac.";
     public static final String MESSAGE_DEFAULT_ROLE_NOT_FOUND = "He thong dang gap su co. Vui long thu lai sau hoac lien he ho tro.";
     public static final String MESSAGE_INVALID_PHONE_OR_PASSWORD = "So dien thoai hoac mat khau khong dung. Vui long kiem tra lai.";
     public static final String MESSAGE_EMAIL_NOT_VERIFIED = "Email chua duoc xac thuc. Vui long kiem tra hop thu va xac thuc truoc khi dang nhap.";
@@ -202,6 +211,15 @@ public class Constant {
     public static final String MESSAGE_PHONE_NUMBER_EXACTLY_10_DIGITS = "So dien thoai phai gom dung 10 chu so.";
     public static final String MESSAGE_PHONE_NUMBER_NUMERIC_ONLY = "So dien thoai chi duoc chua chu so, khong duoc chua chu cai hoac ky tu dac biet.";
     public static final String MESSAGE_ACCOUNT_UNLOCKED_SUCCESSFULLY = "Mo khoa tai khoan thanh cong.";
+    public static final String MESSAGE_USER_CREATED_SUCCESSFULLY = "Tao nguoi dung thanh cong.";
+    public static final String MESSAGE_USER_UPDATED_SUCCESSFULLY = "Cap nhat thong tin nguoi dung thanh cong.";
+    public static final String MESSAGE_USER_STATUS_UPDATED_SUCCESSFULLY = "Cap nhat trang thai nguoi dung thanh cong.";
+    public static final String MESSAGE_USER_DELETED_SUCCESSFULLY = "Xoa nguoi dung thanh cong.";
+    public static final String MESSAGE_USER_UNLOCKED_SUCCESSFULLY = "Mo khoa tai khoan nguoi dung thanh cong.";
+    public static final String MESSAGE_USER_PASSWORD_RESET_SUCCESSFULLY = "Dat lai mat khau nguoi dung thanh cong.";
+    public static final String MESSAGE_USER_PIN_RESET_SUCCESSFULLY = "Dat lai ma PIN nguoi dung thanh cong.";
+    public static final String MESSAGE_ROLE_NOT_FOUND = "Khong tim thay vai tro (role) tuong ung.";
+    public static final String MESSAGE_CANNOT_DELETE_ADMIN = "Khong the vo hieu hoa hoac xoa tai khoan quan tri vien.";
     public static final String MESSAGE_VERIFICATION_CODE_SENT_SUCCESSFULLY = "Ma xac thuc da duoc gui thanh cong.";
     public static final String MESSAGE_PASSWORD_RESET_CODE_SENT_SUCCESSFULLY = "Ma dat lai mat khau da duoc gui thanh cong.";
     public static final String MESSAGE_PASSWORD_RESET_SUCCESSFULLY = "Dat lai mat khau thanh cong.";
