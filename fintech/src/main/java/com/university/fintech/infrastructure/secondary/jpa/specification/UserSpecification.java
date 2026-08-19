@@ -43,7 +43,11 @@ public class UserSpecification {
             }
 
             if (ekycStatus != null && !ekycStatus.isBlank()) {
-                predicates.add(cb.equal(cb.upper(root.get("ekycStatus")), ekycStatus.trim().toUpperCase()));
+                if ("NOT_VERIFIED".equalsIgnoreCase(ekycStatus.trim())) {
+                    predicates.add(cb.isNull(root.get("ekycStatus")));
+                } else {
+                    predicates.add(cb.equal(cb.upper(root.get("ekycStatus")), ekycStatus.trim().toUpperCase()));
+                }
             }
 
             if (roleCode != null && !roleCode.isBlank()) {
