@@ -14,6 +14,10 @@ public interface UserRepository extends BaseJPARepository<UserEntity, UUID> {
 
     boolean existsByPhoneNumber(String phoneNumber);
 
+    boolean existsByIdentityNumber(String identityNumber);
+
+    boolean existsByIdentityNumberAndIdNot(String identityNumber, UUID id);
+
     @EntityGraph(attributePaths = {"roles", "roles.permissions"})
     Optional<UserEntity> findByPhoneNumber(String phoneNumber);
 

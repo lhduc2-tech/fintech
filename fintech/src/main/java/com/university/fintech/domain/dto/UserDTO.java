@@ -42,6 +42,14 @@ public class UserDTO {
 
     private Integer failedLoginAttempts;
 
+    private String pinHash;
+
+    private Integer pinFailedAttempts;
+
+    private String ekycStatus;
+
+    private OffsetDateTime ekycRegisteredAt;
+
     @Builder.Default
     private Set<String> roleCodes = new HashSet<>();
 
