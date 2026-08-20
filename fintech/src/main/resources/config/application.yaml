@@ -161,14 +161,14 @@ application:
     pin-max-failed-attempts: ${WALLET_PIN_MAX_FAILED_ATTEMPTS:5}
   faceid:
     # URL của FaceID Python server (nội bộ Docker network)
-    server-url: ${FACEID_SERVER_URL:http://47.129.142.105:5001}
+    server-url: ${FACEID_SERVER_URL:https://ai.fintech-seggs.xyz}
     # Ngưỡng giá trị giao dịch bắt buộc FaceID (VNĐ) — chuẩn QĐ 2345/QĐ-NHNN
     high-value-threshold: ${FACEID_HIGH_VALUE_THRESHOLD:10000000}
     # Tắt/mở FaceID (dùng khi test local không có Python server)
     enabled: ${FACEID_ENABLED:true}
   fraud-detection:
     # URL của Fraud Detection Python server (cổng 5002)
-    server-url: ${FRAUD_DETECTION_SERVER_URL:http://47.129.142.105:5002}
+    server-url: ${FRAUD_DETECTION_SERVER_URL:https://ai.fintech-seggs.xyz/fraud}
     # Bật/tắt gọi Fraud Detection
     enabled: ${FRAUD_DETECTION_ENABLED:true}
     # Timeout gọi sàng lọc gian lận (giây)
